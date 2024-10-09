@@ -1,6 +1,6 @@
 import axios from './axios';
-const API = 'https://zachpage.onrender.com'
+const API = 'https://zachpage.onrender.com/api'
 
-export const registerRequest = user => axios.post(`api/register`, user)
-export const loginRequest = user => axios.post(`api/login`, user)
-export const verifyTokenRequest = () => axios.get(`api/verify`)
+export const registerRequest = user => axios.post(`/register`, user)
+export const loginRequest = user => axios.post(`/login`, user)
+export const verifyTokenRequest = () => axios.get(`/verify`)
