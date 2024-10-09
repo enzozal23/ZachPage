@@ -3,15 +3,15 @@ import { createProduct, getProducts, getAllSales, getProductByCode, getProduct, 
 
 const router = Router();
 
-router.post('/products', createProduct);
-router.post('/products/sales', createSale)
-router.get('/products/sales', getAllSales);
-router.get('/products', getProducts);
-router.get('/products/:id', getProduct);
-router.get('/products/code/:code', getProductByCode);
-router.put('/products/:id', updateProduct,);
-router.put('/products/code/:code', updateProductByCode);
-router.put('/products/sell/:code', sellProducts)
-router.delete('/products/:id', deleteProduct);
+router.post('api/products', createProduct);
+router.post('api/products/sales', createSale)
+router.get('api/products/sales', getAllSales);
+router.get('api/products', getProducts);
+router.get('api/products/:id', getProduct);
+router.get('api/products/code/:code', getProductByCode);
+router.put('api/products/:id', updateProduct,);
+router.put('api/products/code/:code', updateProductByCode);
+router.put('api/products/sell/:code', sellProducts)
+router.delete('api/products/:id', deleteProduct);
 
 export default router;
