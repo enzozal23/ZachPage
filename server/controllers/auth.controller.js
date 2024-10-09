@@ -2,8 +2,11 @@ import brcypt from 'bcryptjs'
 import { createAccessToken } from '../libs/jwt.js';
 import User from "../models/user.models.js";
 import jwt from 'jsonwebtoken'
-import { TOKEN_SECRET } from '../config.js';
+import dotenv from 'dotenv'
 import userModels from '../models/user.models.js';
+
+
+dotenv.config()
 
 export const register = async (req, res) => {
     const { email, password, username } = req.body
@@ -89,7 +92,7 @@ export const verifyToken = async (req, res) => {
     const { token } = req.cookies
     if (!token) return res.status(401).json({ message: "unauthorized no token" });
 
-    jwt.verify(token, TOKEN_SECRET, async (error, user) => {
+    jwt.verify(token, process.env.TOKEN_SECRET, async (error, user) => {
         if (error) return res.status(401).json({ message: "unauthorized" })
 
         const userFound = await User.findById(user.id)

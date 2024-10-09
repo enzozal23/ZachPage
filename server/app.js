@@ -5,11 +5,12 @@ import tasksRoutes from './routes/tasks.routes.js'
 import productsRoutes from './routes/products.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
+import dotenv from 'dotenv'
 //inicializando app
 const app = express()
 
 
-
+dotenv.config()
 //middlewares
 app.use(cors({
     origin: 'http://localhost:5173',

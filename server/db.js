@@ -1,5 +1,7 @@
 import mongoose from "mongoose"
-
+import dotenv from 'dotenv'
+dotenv.config()
+const uri = process.env.DB_TOKEN
 export const connectDB = async () => {
     try {
 
@@ -7,7 +9,7 @@ export const connectDB = async () => {
         mongoose.set('strictPopulate', false);
 
 
-        await mongoose.connect('mongodb+srv://enzo-coderback:cSU3re9634dzg1tb@cluster0.f9fcrmm.mongodb.net/tarjetaDigital')
+        await mongoose.connect(uri)
 
 
         console.log('mongo conectado')
