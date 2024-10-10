@@ -1,6 +1,6 @@
 
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Routes, Route, HashRouter } from 'react-router-dom'
 import RegisterPage from './pages/RegisterPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
@@ -22,7 +22,7 @@ function App() {
     <AuthProvider>
       <TaskProvider>
         <ProductsProvider>
-          <BrowserRouter>
+          <HashRouter>
             <Navbar />
             <Routes>
 
@@ -47,7 +47,7 @@ function App() {
 
 
 
-          </BrowserRouter>
+          </HashRouter>
         </ProductsProvider>
       </TaskProvider>
     </AuthProvider>
