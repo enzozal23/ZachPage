@@ -12,6 +12,11 @@ const productSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    marca: {
+        type: String,
+        required: true,
+        trim: true
+    },
     description: {
         type: String,
         required: true,
@@ -33,7 +38,7 @@ const productSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        enum: ['creatinas', 'proteinas', 'preentrenos', 'colageno'],
+        enum: ['creatinas', 'proteinas', 'preentrenos', 'colageno', 'aminoacidos', 'vitaminas'],
         required: true
     },
     image: {

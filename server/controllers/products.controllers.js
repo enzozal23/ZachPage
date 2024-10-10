@@ -4,7 +4,7 @@ import Sale from '../models/sale.model.js';
 // Crear un nuevo producto
 export const createProduct = async (req, res) => {
     try {
-        const { code, title, description, price, quantity, category, image } = req.body;
+        const { code, title, marca, description, price, quantity, category, image } = req.body;
 
         if (!code) {
             return res.status(400).json({ message: 'El código del producto es obligatorio' });
@@ -12,6 +12,7 @@ export const createProduct = async (req, res) => {
         const newProduct = new Product({
             code,
             title,
+            marca,
             description,
             price,
             quantity,

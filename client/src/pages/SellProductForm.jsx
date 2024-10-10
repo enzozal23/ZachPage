@@ -163,7 +163,7 @@ function SellProductForm() {
                 <div>
                     <select {...register('paymentMethod', { required: true })} className="w-full p-2 border border-gray-300 rounded-md text-gray-800">
                         <option value="">Método de Pago</option>
-                        <option value="efectivo">Efectivo</option>
+                        <option value="efectivo">efectivo</option>
                         <option value="transferencia">transferencia</option>
                         <option value="otro">otro</option>
                     </select>

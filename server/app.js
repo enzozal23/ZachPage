@@ -13,7 +13,7 @@ const app = express()
 dotenv.config()
 //middlewares
 app.use(cors({
-    origin: 'https://zachpage-frontend.onrender.com',
+    origin: 'http://localhost:5173',
     credentials: true
 }))
 app.use(morgan('dev'))//ver las peticiones

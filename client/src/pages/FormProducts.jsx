@@ -29,6 +29,7 @@ function FormProducts() { // isUpdate determina si es actualización
             if (response && response.data) {
                 setExistProduct(true); // Si el producto existe, muestra la imagen y llena los campos
                 setValue('title', response.data.title);
+                setValue('marca', response.data.marca);
                 setValue('description', response.data.description);
                 setValue('price', response.data.price);
                 setValue('quantity', response.data.quantity);
@@ -49,6 +50,7 @@ function FormProducts() { // isUpdate determina si es actualización
         // Limpia todos los campos del formulario
         reset({
             title: '',
+            marca: '',
             description: '',
             price: '',
             quantity: '',
@@ -133,7 +135,15 @@ function FormProducts() { // isUpdate determina si es actualización
                     {errors.title && <p className="text-red-500 text-sm mt-1">El título es obligatorio</p>}
                 </div>
 
-                {/* Campo para la descripción (obligatorio solo al crear) */}
+                <div>
+                    <input
+                        {...register('marca', { required: !isUpdate })} //
+                        placeholder='marca'
+                        className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-800 focus:ring focus:ring-blue-200 focus:outline-none"
+                    />
+                    {errors.marca && <p className="text-red-500 text-sm mt-1">la marca es obligatoria</p>}
+                </div>
+
                 <div>
                     <input
                         {...register('description', { required: !isUpdate })} // Requerido solo si no es actualización

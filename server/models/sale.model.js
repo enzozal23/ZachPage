@@ -16,7 +16,7 @@ const saleSchema = new mongoose.Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['efectivo ', 'credito', 'debito', 'transferencia', 'otro'] // puedes agregar otros métodos
+        enum: ['efectivo', 'credito', 'debito', 'transferencia', 'otro'] // puedes agregar otros métodos
     },
     product: {
         type: String,
