@@ -6,10 +6,12 @@ import productsRoutes from './routes/products.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import { fileURLToPath } from 'url'
 //inicializando app
 const app = express()
 
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 dotenv.config()
 //middlewares
 app.use(cors({
@@ -23,6 +25,8 @@ app.use('/api', authRoutes)//rutas api
 app.use('/api', tasksRoutes)
 app.use('/api', productsRoutes)
 
-
-
+app.use(express.static(path.join(__dirname, 'client/build')));
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+});
 export default app
