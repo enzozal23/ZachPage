@@ -6,6 +6,7 @@ import productsRoutes from './routes/products.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import path from 'path';
 import { fileURLToPath } from 'url'
 //inicializando app
 const app = express()
