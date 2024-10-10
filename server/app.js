@@ -26,7 +26,7 @@ app.use('/api', authRoutes)//rutas api
 app.use('/api', tasksRoutes)
 app.use('/api', productsRoutes)
 
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use('/assets', express.static(path.join(__dirname, 'dist', 'assets')));
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
