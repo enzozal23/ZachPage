@@ -26,8 +26,8 @@ app.use('/api', authRoutes)//rutas api
 app.use('/api', tasksRoutes)
 app.use('/api', productsRoutes)
 
-app.use(express.static(path.join(__dirname, 'client/build')));
+app.use(express.static(path.join(__dirname, 'public', 'build')));
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'build', 'index.html'));
 });
 export default app
