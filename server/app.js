@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config()
 //middlewares
 app.use(cors({
-    origin: 'https://zachpage-frontend.onrender.com',
+    origin: 'https://zachpage-frontend.onrender.com', //
     credentials: true
 }))
 app.use(morgan('dev'))//ver las peticiones
