@@ -4,7 +4,7 @@ import Products from './Products'
 function HomePage() {
     return (
         <div>
-            
+
             <Products />
         </div>
     )

@@ -16,6 +16,7 @@ import NotFound from './pages/NotFound.jsx'
 import FormProducts from './pages/FormProducts.jsx'
 import SellProductForm from './pages/SellProductForm.jsx'
 import SalesList from './pages/SalesList.jsx'
+import HomePage from './pages/HomePage.jsx'
 
 function App() {
   return (
@@ -26,7 +27,7 @@ function App() {
             <Navbar />
             <Routes>
 
-              <Route path="/" element={<h1>home page</h1>} />
+              <Route path="/" element={<HomePage />} />
               <Route path="/register" element={<RegisterPage />} />           {/*  RUTAS PUBLICAS  */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/products" element={<Products />} />
