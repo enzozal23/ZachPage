@@ -64,6 +64,7 @@ function FormProducts() { // isUpdate determina si es actualización
         try {
             const response = await upByCodeProductRequest(values.code, values);
             console.log("Producto actualizado", response.data);
+            reset()
         } catch (error) {
             console.error("Error al actualizar el producto", error);
         }
@@ -78,6 +79,8 @@ function FormProducts() { // isUpdate determina si es actualización
             reset()
         } catch (error) {
             console.error("Error al crear el producto", error);
+            alert("el producto ya existe")
+            reset()
         }
     };
 

@@ -152,13 +152,18 @@ function SellProductForm() {
                     {errors.customer && <p className="text-red-500 text-sm mt-1">El nombre del cliente es obligatorio</p>}
                 </div>
                 <div>
-                    <input
-                        {...register('seller', { required: true })}
-                        placeholder="Nombre del vendedor"
+
+                    <select
+                        {...register('seller', { required: true })} // Usamos el register de react-hook-form para el select
                         className="w-full p-2 border border-gray-300 rounded-md text-gray-800"
-                    />
-                    {errors.customer && <p className="text-red-500 text-sm mt-1">El nombre del cliente es obligatorio</p>}
+                    >
+                        <option value="">Seleccionar vendedor</option> {/* Opción por defecto */}
+                        <option value="Ricardo">Ricardo</option>
+                        <option value="Enzo">Enzo</option>
+                    </select>
+                    {errors.seller && <p className="text-red-500 text-sm mt-1">El nombre del vendedor es obligatorio</p>}
                 </div>
+
                 {/* Campo para el método de pago */}
                 <div>
                     <select {...register('paymentMethod', { required: true })} className="w-full p-2 border border-gray-300 rounded-md text-gray-800">
