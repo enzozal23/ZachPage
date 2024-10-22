@@ -16,8 +16,8 @@ const __dirname = path.dirname(__filename);
 dotenv.config()
 //middlewares
 const allowedOrigins = [
-    'https://zachpage-frontend.onrender.com', 
-    'https://otro-origen.com'
+    'https://zachpage-frontend.onrender.com',
+    'https://zachstore.onrender.com'
 ];
 
 app.use(cors({
