@@ -15,10 +15,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config()
 //middlewares
+const allowedOrigins = [
+    'https://zachpage-frontend.onrender.com', 
+    'https://otro-origen.com'
+];
+
 app.use(cors({
-    origin: 'https://zachpage-frontend.onrender.com', //
+    origin: function (origin, callback) {
+        // Si el origen está en la lista de permitidos o si no hay origen (por ejemplo, en solicitudes como postman), lo permitimos
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('No permitido por CORS'));
+        }
+    },
     credentials: true
-}))
+}));
 app.use(morgan('dev'))//ver las peticiones
 app.use(express.json())//consola pueda leer json del body
 app.use(cookieParser())//
