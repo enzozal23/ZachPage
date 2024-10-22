@@ -21,10 +21,7 @@ export function ProductsProvider({ children }) {
         }
     }
 
-    const createProducts = async (products) => {
-        const res = await createTasksRequest(products)
-        console.log(res)
-    }
+   
     return (
         <ProductsContext.Provider value={{ products, getProducts }}>
             {children}
