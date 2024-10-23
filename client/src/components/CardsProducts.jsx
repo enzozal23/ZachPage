@@ -64,6 +64,10 @@ function CardsProducts() {
                             <option value="aminoacidos">Aminoácidos</option>
                             <option value="vitaminas">Vitaminas</option>
                             <option value="colageno">Colageno</option>
+                            <option value="quemadores">Quemadores</option>
+                            <option value="ganadores">ganadores</option>
+                            <option value="geles">geles</option>
+                            <option value="shaker">Shaker</option>
                         </select>
 
                         <label className="mr-4 font-semibold text-black">Filtrar por marca:</label>

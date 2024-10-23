@@ -1,16 +1,23 @@
-import { Link } from "react-router-dom"
-import { useAuth } from "../context/AuthContext"
-import { useState } from "react"
-import zachLogo from "../../images/zachLogo.png"
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
+import zachLogo from "../../images/zachLogo.png";
 
 function Navbar() {
-    const { isAuthenticated, logout, user } = useAuth()
-    const [menuOpen, setMenuOpen] = useState(false)
+    const { isAuthenticated, logout, user } = useAuth();
+    const [menuOpen, setMenuOpen] = useState(false);
+
+    // Función para cerrar el menú cuando se hace clic en un link
+    const closeMenu = () => setMenuOpen(false);
 
     return (
         <div className="relative">
             <nav className="bg-zinc-700 my-3 flex justify-between items-center py-4 px-8 rounded-lg shadow-lg relative z-10">
-                <Link to="/products" className="text-white text-2xl font-bold hover:text-yellow-400 transition-colors duration-300">
+                <Link
+                    to="/products"
+                    onClick={closeMenu} // Cerrar el menú al hacer clic en el logo
+                    className="text-white text-2xl font-bold hover:text-yellow-400 transition-colors duration-300"
+                >
                     <img src={zachLogo} alt="Home" className="w-32" />
                 </Link>
 
@@ -24,6 +31,7 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/FormProducts"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300 lg:mt-0 mt-2"
                                 >
                                     Agregar/Actualizar
@@ -32,6 +40,7 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/products"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300"
                                 >
                                     productos
@@ -40,6 +49,7 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/ventas"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300 lg:mt-0 mt-2"
                                 >
                                     Ventas
@@ -47,7 +57,17 @@ function Navbar() {
                             </li>
                             <li>
                                 <Link
+                                    to="/ventasWeb"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
+                                    className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300 lg:mt-0 mt-2"
+                                >
+                                    VentasWeb
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
                                     to="/vender"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300 lg:mt-0 mt-2"
                                 >
                                     Vender
@@ -56,7 +76,10 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/"
-                                    onClick={() => logout()}
+                                    onClick={() => {
+                                        logout();
+                                        closeMenu(); // Cerrar el menú al hacer logout
+                                    }}
                                     className="bg-red-400 text-white px-4 py-2 hover:bg-red-500 transition-colors duration-300 lg:mt-0 mt-2"
                                 >
                                     Logout
@@ -68,6 +91,7 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/login"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="bg-blue-500  px-4 py-2 rounded-lg hover:bg-yellow-500 transition-colors duration-300 lg:mt-0 mt-2 font-bold text-white"
                                 >
                                     Login
@@ -97,6 +121,7 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/FormProducts"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300"
                                 >
                                     Agregar/Actualizar
@@ -105,6 +130,7 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/products"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300"
                                 >
                                     productos
@@ -113,6 +139,7 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/ventas"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300"
                                 >
                                     Ventas
@@ -120,7 +147,17 @@ function Navbar() {
                             </li>
                             <li>
                                 <Link
+                                    to="/ventasWeb"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
+                                    className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300"
+                                >
+                                    VentasWeb
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
                                     to="/vender"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300"
                                 >
                                     Vender
@@ -129,7 +166,10 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/"
-                                    onClick={() => logout()}
+                                    onClick={() => {
+                                        logout();
+                                        closeMenu(); // Cerrar el menú al hacer logout
+                                    }}
                                     className="bg-red-400 text-white px-4 py-2 hover:bg-red-500 transition-colors duration-300"
                                 >
                                     Logout
@@ -141,6 +181,7 @@ function Navbar() {
                             <li>
                                 <Link
                                     to="/login"
+                                    onClick={closeMenu} // Cerrar el menú al hacer clic
                                     className="bg-yellow-400 text-black px-4 py-2 rounded-lg hover:bg-yellow-500 transition-colors duration-300"
                                 >
                                     Login
@@ -151,7 +192,8 @@ function Navbar() {
                 </ul>
             )}
         </div>
-    )
+    );
 }
 
-export default Navbar
+export default Navbar;
+

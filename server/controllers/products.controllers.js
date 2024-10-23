@@ -150,7 +150,7 @@ export const updateStock = async (req, res) => {
 
         // Array para acumular errores
         let errors = [];
-
+        let productsDetail = []
         // Actualizar el stock de los productos
         await Promise.all(products.map(async ({ code, quantityToSell }) => {
             const product = await Product.findOne({ code: Number(code) });
@@ -171,7 +171,13 @@ export const updateStock = async (req, res) => {
             }
 
             product.quantity -= quantitySell;
+
+
+
+            productsDetail.push(product)
+
             await product.save();
+
         }));
 
         // Si hubo errores, enviar respuesta con los errores acumulados
@@ -188,9 +194,9 @@ export const updateStock = async (req, res) => {
                 currency_id: "ARS" // Moneda
             })),
             back_urls: {
-                success: 'https://www.youtube.com',
-                failure: 'https://www.facebook.com',
-                pending: 'https://www.youtube.com',
+                success: 'https://www.zachsuplementos.com/',
+                failure: 'https://www.zachsuplementos.com/',
+                pending: 'https://www.zachsuplementos.com/',
             },
             auto_return: "approved",
         };
@@ -214,6 +220,11 @@ export const updateStock = async (req, res) => {
         });
 
         const savedSale = await newSale.save();
+
+
+
+
+
 
         // Función para enviar el correo electrónico
         const sendEmail = async ({ email, subject, html }) => {
@@ -270,8 +281,8 @@ export const updateStock = async (req, res) => {
                 display: inline-block;
                 padding: 10px 20px;
                 margin-top: 20px;
-                background-color: #007BFF;
-                color: black;
+                background-color: black;
+                color:white;
                 text-decoration: none;
                 border-radius: 5px;
             }
@@ -301,10 +312,11 @@ export const updateStock = async (req, res) => {
                 </ul>
                 <p>Aquí están los productos que compraste:</p>
                 <ul class="product-list">
-                    ${products.map(product => `
+                    ${productsDetail.map(product => `
                         <li>
+                            <img src="${product.image}" alt="${product.title}" width="100" height="100" /><br>
                             <strong>Código:</strong> ${product.code} <br>
-                            <strong>Cantidad a vender:</strong> ${product.quantityToSell}
+                            <strong>precio :</strong> ${product.price}
                         </li>
                     `).join('')}
                 </ul>
@@ -374,6 +386,15 @@ export const getAllSales = async (req, res) => {
     }
 };
 
+export const getAllSalewebs = async (req, res) => {
+
+    try {
+        const sales = await SaleWeb.find();
+        res.json(sales);
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener las ventas" });
+    }
+ }
 
 
 export const sendMail = async (req, res) => {

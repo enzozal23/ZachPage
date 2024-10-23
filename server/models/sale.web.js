@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { string } from 'zod';
+
 
 const saleSchema = new mongoose.Schema({
     email: { type: String, required: true },

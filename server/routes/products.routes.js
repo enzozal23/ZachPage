@@ -11,7 +11,8 @@ import {
     deleteProduct,
     sellProducts,
     createSale,
-    updateStock
+    updateStock,
+    getAllSalewebs
 } from '../controllers/products.controllers.js';
 
 const router = Router();
@@ -19,6 +20,7 @@ const router = Router();
 router.post('/products', createProduct);
 router.post('/products/sales', createSale);
 router.post('/contact', sendMail)
+router.get('/products/salesWeb', getAllSalewebs);
 router.get('/products/sales', getAllSales);
 router.get('/products', getProducts);
 router.get('/products/:id', getProduct);

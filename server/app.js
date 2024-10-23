@@ -19,7 +19,6 @@ const allowedOrigins = [
     'https://zachpage-frontend.onrender.com',
     'https://www.zachsuplementos.com',
     'https://zachsuplementos.com'
-
 ];
 
 app.use(cors({

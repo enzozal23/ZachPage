@@ -17,6 +17,7 @@ import FormProducts from './pages/FormProducts.jsx'
 import SellProductForm from './pages/SellProductForm.jsx'
 import SalesList from './pages/SalesList.jsx'
 import HomePage from './pages/HomePage.jsx'
+import SaleWebList from './pages/SaleWebList.jsx'
 
 function App() {
   return (
@@ -41,6 +42,8 @@ function App() {
                 <Route path="/FormProducts" element={<FormProducts />} />
                 <Route path="/vender" element={<SellProductForm />} />
                 <Route path="/ventas" element={<SalesList />} />
+                <Route path="/ventasWeb" element={<SaleWebList />} />
+
 
               </Route>
               <Route path='*' element={<NotFound />} />

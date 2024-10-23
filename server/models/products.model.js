@@ -38,7 +38,7 @@ const productSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        enum: ['creatinas', 'proteinas', 'preentrenos', 'colageno', 'aminoacidos', 'vitaminas'],
+        enum: ['creatinas', 'proteinas', 'preentrenos', 'colageno', 'aminoacidos', 'vitaminas', 'geles', 'quemadores', 'ganadores', 'shaker'],
         required: true
     },
     image: {
