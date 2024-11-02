@@ -4,6 +4,7 @@ import SaleWeb from '../models/sale.web.js'
 import nodemailer from 'nodemailer'
 import Dotenv from 'dotenv'
 import { MercadoPagoConfig, Preference } from 'mercadopago'
+import { number } from 'zod';
 Dotenv.config()
 
 const client = new MercadoPagoConfig({
@@ -145,6 +146,7 @@ export const sellProducts = async (req, res) => {
     }
 }
 export const updateStock = async (req, res) => {
+    console.log(req.body)
     try {
         const { email, products, total, seller, telfone } = req.body;
 
@@ -190,7 +192,7 @@ export const updateStock = async (req, res) => {
             items: products.map(product => ({
                 title: product.title,
                 quantity: product.quantityToSell,
-                unit_price: product.price,
+                unit_price: Number(product.price),
                 currency_id: "ARS" // Moneda
             })),
             back_urls: {
@@ -394,7 +396,7 @@ export const getAllSalewebs = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: "Error al obtener las ventas" });
     }
- }
+}
 
 
 export const sendMail = async (req, res) => {
