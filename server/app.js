@@ -18,8 +18,8 @@ const __dirname = path.dirname(__filename);
 dotenv.config()
 //middlewares
 const allowedOrigins = [
-    'https://lexora-board.onrender.com',
     'https://zachpage-frontend.onrender.com',
+    'https://lexora-board.onrender.com',
     'https://www.zachsuplementos.com',
     'https://zachsuplementos.com',
     'http://localhost:5173',
@@ -47,7 +47,7 @@ app.use('/api', kanbanRoutes)
 app.use('/api', logsRoutes)
 
 app.get('/', (_req, res) => {
-    res.redirect('https://lexora-board.onrender.com/')
+    res.redirect('https://zachpage-frontend.onrender.com/')
 })
 
 

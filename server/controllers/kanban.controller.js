@@ -168,9 +168,6 @@ export const saveKanban = async (req, res) => {
 
   await doc.save()
   await logInfo('Tablero guardado', { boards: boards.length, tickets: tickets.length, imports: imports.length })
-  sendDueReminders().catch((error) => {
-    logError('No se pudo revisar vencimientos después de guardar', error)
-  })
 
   res.json({
     boards: doc.boards,
@@ -201,5 +198,16 @@ export const testDueReminder = async (req, res) => {
     res.status(status).json({
       message: error.message || 'No se pudo enviar el mail.',
     })
+  }
+}
+
+export const runDueReminders = async (req, res) => {
+  await logInfo('Cron externo: revisar vencimientos')
+  try {
+    await sendDueReminders()
+    res.json({ message: 'Revisión de vencimientos ejecutada.' })
+  } catch (error) {
+    await logError('Cron externo falló', error)
+    res.status(500).json({ message: error.message || 'No se pudo revisar los vencimientos.' })
   }
 }

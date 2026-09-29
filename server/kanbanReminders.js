@@ -5,7 +5,38 @@ import { sendMail } from './libs/mail.js'
 import { formatDueDate, isAboutToExpire, parseDueDate, todayISO } from './libs/dueDates.js'
 import { logError, logInfo } from './libs/appLog.js'
 
-const HOUR_MS = 60 * 60 * 1000
+const TIME_ZONE = 'America/Argentina/Buenos_Aires'
+const DIGEST_HOUR = 7
+const CHECK_MS = 60 * 1000
+let lastDigestDay = ''
+
+function frontendBaseUrl() {
+  const fromEnv = String(process.env.FRONTEND_URL || process.env.LEXORA_URL || '').trim().replace(/\/$/, '')
+  if (fromEnv) return fromEnv
+  return 'https://zachpage-frontend.onrender.com'
+}
+
+export function ticketUrl(ticketId) {
+  return `${frontendBaseUrl()}/t/${encodeURIComponent(ticketId)}`
+}
+
+function argentinaClock(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+  const value = (type) => parts.find((part) => part.type === type)?.value || '00'
+  return {
+    date: `${value('year')}-${value('month')}-${value('day')}`,
+    hour: Number(value('hour')),
+    minute: Number(value('minute')),
+  }
+}
 
 function findUser(users, assignee) {
   const key = (assignee || '').trim().toLowerCase()
@@ -26,69 +57,136 @@ function taskLine(ticket) {
   return `Tarea: ${single}`
 }
 
-export async function sendTicketDueMail({ ticket, boardName }) {
-  const assigneeNames = Array.isArray(ticket.assignees) && ticket.assignees.length
+function peopleNames(ticket) {
+  const assignees = Array.isArray(ticket.assignees) && ticket.assignees.length
     ? ticket.assignees
     : String(ticket.assignee || '').split(',')
-  const followerNames = Array.isArray(ticket.followers) ? ticket.followers : []
+  const followers = Array.isArray(ticket.followers) ? ticket.followers : []
+  return [...assignees, ...followers].map((name) => String(name || '').trim()).filter(Boolean)
+}
 
-  await logInfo('Buscando responsable de la tarjeta', {
-    ticketId: ticket.id,
-    title: ticket.title,
-    assignee: assigneeNames.join(', '),
-    followers: followerNames.join(', '),
-    dueDate: ticket.dueDate || '',
-    boardName: boardName || '',
+function digestBody({ username, items, today }) {
+  const lines = [
+    `Hola ${username || ''},`.trim(),
+    '',
+    `Estas son las tarjetas de Lexora que vencen hoy o mañana (${formatDueDate(today)}):`,
+    '',
+  ]
+
+  items.forEach((item, index) => {
+    lines.push(`${index + 1}. ${item.title}`)
+    lines.push(`   Tablero: ${item.boardName}`)
+    lines.push(`   Vence: ${item.when}`)
+    if (item.tasks) lines.push(`   ${item.tasks}`)
+    lines.push(`   Abrir: ${item.url}`)
+    lines.push('')
   })
 
-  const lookup = [...assigneeNames, ...followerNames].map((name) => String(name || '').trim()).filter(Boolean)
-  const users = lookup.length
-    ? await User.find({
-      $or: [{ username: { $in: lookup } }, { email: { $in: lookup } }],
-    }).select('username email')
-    : []
+  lines.push('Entrá a Lexora para revisarlas.')
+  return lines.join('\n')
+}
+
+async function loadUsersForTickets(tickets) {
+  const lookup = [...new Set(tickets.flatMap(peopleNames))]
+  if (!lookup.length) return []
+  return User.find({
+    $or: [{ username: { $in: lookup } }, { email: { $in: lookup } }],
+  }).select('username email')
+}
+
+function recipientsForTicket(ticket, users) {
   const matched = []
   const seen = new Set()
-  for (const name of [...assigneeNames, ...followerNames]) {
+  for (const name of peopleNames(ticket)) {
     const user = findUser(users, name)
     const email = user?.email?.trim().toLowerCase()
     if (!email || seen.has(email)) continue
     seen.add(email)
     matched.push(user)
   }
-  if (!matched.length) {
+  return matched
+}
+
+function ticketDigestItem(ticket, boardName) {
+  const due = parseDueDate(ticket.dueDate)
+  return {
+    ticketId: ticket.id,
+    due,
+    title: ticket.title || 'Sin título',
+    boardName: boardName || 'principal',
+    when: due ? formatDueDate(due) : 'sin fecha',
+    tasks: taskLine(ticket),
+    url: ticketUrl(ticket.id),
+  }
+}
+
+/** Un mail por destinatario con todas sus tarjetas por vencer. */
+export async function sendDueDigest({ tickets, boards, markSent = true }) {
+  if (!tickets.length) return { sent: 0, recipients: [] }
+
+  const users = await loadUsersForTickets(tickets)
+  const byEmail = new Map()
+
+  for (const ticket of tickets) {
+    const board = boards.find((item) => item.id === ticket.boardId)
+    const item = ticketDigestItem(ticket, board?.name)
+    const recipients = recipientsForTicket(ticket, users)
+    if (!recipients.length) {
+      await logInfo('Tarjeta por vencer sin destinatario', {
+        ticketId: ticket.id,
+        title: ticket.title,
+      })
+      continue
+    }
+    for (const user of recipients) {
+      const email = user.email.trim().toLowerCase()
+      if (!byEmail.has(email)) {
+        byEmail.set(email, { user, items: [] })
+      }
+      byEmail.get(email).items.push(item)
+    }
+  }
+
+  const today = todayISO()
+  const recipients = []
+  for (const [email, pack] of byEmail) {
+    const items = pack.items
+    await sendMail({
+      to: email,
+      subject: items.length === 1
+        ? `Lexora — Vence pronto: ${items[0].title}`
+        : `Lexora — ${items.length} tarjetas por vencer`,
+      text: digestBody({
+        username: pack.user.username || email,
+        items,
+        today,
+      }),
+    })
+    recipients.push(email)
+  }
+
+  if (markSent) {
+    for (const ticket of tickets) {
+      const due = parseDueDate(ticket.dueDate)
+      if (due) ticket.reminderSentFor = due
+    }
+  }
+
+  return { sent: recipients.length, recipients }
+}
+
+export async function sendTicketDueMail({ ticket, boardName }) {
+  const result = await sendDueDigest({
+    tickets: [ticket],
+    boards: [{ id: ticket.boardId, name: boardName }],
+    markSent: false,
+  })
+  if (!result.sent) {
     const error = new Error('Asigná un responsable o un seguidor que sea un usuario existente.')
     error.status = 400
-    await logError('No hay usuario para el aviso de vencimiento', error, {
-      ticketId: ticket.id,
-      assignee: assigneeNames.join(', '),
-      followers: followerNames.join(', '),
-      users: users.length,
-    })
     throw error
   }
-
-  const due = parseDueDate(ticket.dueDate)
-  const when = due ? formatDueDate(due) : 'sin fecha cargada'
-  const sent = []
-
-  for (const user of matched) {
-    const name = user.username || user.email
-    await sendMail({
-      to: user.email,
-      subject: `Lexora — Vence pronto: ${ticket.title}`,
-      text: [
-        `Hola ${name},`,
-        '',
-        `En Lexora, la tarjeta "${ticket.title}" del tablero ${boardName || 'principal'} vence el ${when}.`,
-        taskLine(ticket),
-        ticket.description ? `\n${ticket.description}` : '',
-      ].filter(Boolean).join('\n'),
-    })
-    sent.push(user.email)
-  }
-
-  return sent.join(', ')
+  return result.recipients.join(', ')
 }
 
 export async function sendDueReminders() {
@@ -99,49 +197,63 @@ export async function sendDueReminders() {
   }
 
   const today = todayISO()
-  let changed = false
-  let reviewed = 0
-  await logInfo('Revisando tarjetas por vencer', {
-    today,
-    tickets: doc.tickets.length,
-  })
-
+  const dueTickets = []
   for (const ticket of doc.tickets) {
     if (ticket.status === 'done') continue
     const due = parseDueDate(ticket.dueDate)
     if (!due || !isAboutToExpire(due, today)) continue
     if (ticket.reminderSentFor === due) continue
-
-    reviewed += 1
-    const board = doc.boards.find((item) => item.id === ticket.boardId)
-
-    try {
-      await sendTicketDueMail({ ticket, boardName: board?.name })
-      ticket.reminderSentFor = due
-      changed = true
-    } catch (error) {
-      if (error.status === 400) continue
-      await logError('Falló el aviso automático', error, { ticketId: ticket.id, title: ticket.title })
-    }
+    dueTickets.push(ticket)
   }
 
-  await logInfo('Revisión de vencimientos terminada', { today, reviewed, changed })
+  await logInfo('Revisando tarjetas por vencer', {
+    today,
+    tickets: doc.tickets.length,
+    porVencer: dueTickets.length,
+  })
 
-  if (changed) {
+  if (!dueTickets.length) {
+    await logInfo('Revisión de vencimientos terminada', { today, reviewed: 0, changed: false })
+    return
+  }
+
+  try {
+    const result = await sendDueDigest({
+      tickets: dueTickets,
+      boards: doc.boards || [],
+      markSent: true,
+    })
     doc.markModified('tickets')
     await doc.save()
+    await logInfo('Revisión de vencimientos terminada', {
+      today,
+      reviewed: dueTickets.length,
+      mails: result.sent,
+      recipients: result.recipients,
+      changed: true,
+    })
+  } catch (error) {
+    await logError('Falló el aviso diario agrupado', error, { today, tickets: dueTickets.length })
   }
 }
 
 export function startDueReminders() {
-  const run = () => {
+  const tick = () => {
+    const { date, hour, minute } = argentinaClock()
+    if (hour !== DIGEST_HOUR || minute > 14) return
+    if (lastDigestDay === date) return
+    lastDigestDay = date
+    logInfo('Disparo diario de vencimientos (07:00 Argentina)', { date, hour, minute })
     sendDueReminders().catch((error) => {
       logError('No se pudo revisar los vencimientos', error)
     })
   }
 
-  if (mongoose.connection.readyState === 1) run()
-  else mongoose.connection.once('connected', run)
+  const arm = () => {
+    tick()
+    setInterval(tick, CHECK_MS)
+  }
 
-  setInterval(run, HOUR_MS)
+  if (mongoose.connection.readyState === 1) arm()
+  else mongoose.connection.once('connected', arm)
 }

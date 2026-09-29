@@ -1,0 +1,33 @@
+name: Lexora due reminders
+
+on:
+  schedule:
+    # 07:00 America/Argentina/Buenos_Aires = 10:00 UTC
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Despertar API y enviar avisos
+        env:
+          API_URL: ${{ secrets.LEXORA_API_URL }}
+          CRON_SECRET: ${{ secrets.LEXORA_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${API_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "Faltan secrets LEXORA_API_URL o LEXORA_CRON_SECRET"
+            exit 1
+          fi
+          BASE="${API_URL%/}"
+          # Despierta Render (cold start)
+          curl -fsS --retry 8 --retry-all-errors --retry-delay 15 --max-time 30 \
+            "$BASE/" >/dev/null || true
+          sleep 5
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 20 --max-time 120 \
+            -X POST "$BASE/api/kanban/reminders/run" \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: $CRON_SECRET"
+          echo
+          echo "Cron de vencimientos OK"
