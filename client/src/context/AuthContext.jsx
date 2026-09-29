@@ -1,5 +1,5 @@
 import { createContext, useState, useContext, useEffect } from "react";
-import { registerRequest, loginRequest, verifyTokenRequest } from '../api/auth'
+import { registerRequest, loginRequest, logoutRequest, verifyTokenRequest } from '../api/auth'
 import Cookies from 'js-cookie'
 
 const TOKEN_KEY = 'token'
@@ -12,6 +12,7 @@ function saveToken(token) {
 function clearToken() {
     localStorage.removeItem(TOKEN_KEY)
     Cookies.remove('token')
+    Cookies.remove('token', { path: '/' })
 }
 
 function readError(error) {
@@ -61,10 +62,16 @@ export const AuthProvider = ({ children }) => {
             setErrors(readError(error))
         }
     }
-    const logout = () => {
-        clearToken()
-        setIsAuthenticated(false)
-        setUser(null)
+    const logout = async () => {
+        try {
+            await logoutRequest()
+        } catch {
+            // igual cerramos la sesión local
+        } finally {
+            clearToken()
+            setIsAuthenticated(false)
+            setUser(null)
+        }
     }
 
     useEffect(() => {
