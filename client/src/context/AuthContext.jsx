@@ -1,7 +1,18 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import { registerRequest, loginRequest, verifyTokenRequest } from '../api/auth'
 import Cookies from 'js-cookie'
+
+const TOKEN_KEY = 'token'
 const AuthContext = createContext()
+
+function saveToken(token) {
+    if (token) localStorage.setItem(TOKEN_KEY, token)
+}
+
+function clearToken() {
+    localStorage.removeItem(TOKEN_KEY)
+    Cookies.remove('token')
+}
 export const useAuth = () => {
     const context = useContext(AuthContext)
     if (!context) {
@@ -20,8 +31,10 @@ export const AuthProvider = ({ children }) => {
     const signup = async (user) => {
         try {
             const res = await registerRequest(user)
-            console.log(res.data)
-            setUser(res.data)
+            saveToken(res.data.token)
+            const sessionUser = { ...res.data }
+            delete sessionUser.token
+            setUser(sessionUser)
             setIsAuthenticated(true)
         } catch (error) {
             console.log(error.response.data)
@@ -33,9 +46,11 @@ export const AuthProvider = ({ children }) => {
     const signin = async (user) => {
         try {
             const res = await loginRequest(user)
-            console.log(res)
+            saveToken(res.data.token)
+            const sessionUser = { ...res.data }
+            delete sessionUser.token
             setIsAuthenticated(true)
-            setUser(res.data)
+            setUser(sessionUser)
         } catch (error) {
             if (Array.isArray(error.response.data)) {
                 return setErrors(error.response.data)
@@ -44,7 +59,7 @@ export const AuthProvider = ({ children }) => {
         }
     }
     const logout = () => {
-        Cookies.remove('token')
+        clearToken()
         setIsAuthenticated(false)
         setUser(null)
     }
@@ -59,9 +74,9 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {// COOKIES TOKEN
         async function checkLogin() {
-            const cookies = Cookies.get(); // busca con js-coookie si hay alguna cookie en el navegador 
+            const token = localStorage.getItem(TOKEN_KEY) || Cookies.get('token')
 
-            if (!cookies.token) {
+            if (!token) {
                 setIsAuthenticated(false) //si no hay token setea todo en false
                 setLoading(false);
 

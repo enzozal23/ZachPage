@@ -2,9 +2,17 @@ import jwt from 'jsonwebtoken'
 import dotenv from "dotenv"
 
 dotenv.config()
+
+export function readToken(req) {
+    if (req.cookies?.token) return req.cookies.token
+    const header = req.headers.authorization || ''
+    if (header.startsWith('Bearer ')) return header.slice(7).trim()
+    return null
+}
+
 export const authRequired = (req, res, next) => {
 
-    const { token } = req.cookies
+    const token = readToken(req)
     if (!token) return res.status(401).json({ message: "unauthorized no token" })
 
 

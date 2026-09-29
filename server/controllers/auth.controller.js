@@ -3,7 +3,12 @@ import { createAccessToken } from '../libs/jwt.js';
 import User from "../models/user.models.js";
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
-import userModels from '../models/user.models.js';
+import { readToken } from '../middlewares/validateToken.js';
+
+const cookieOptions = {
+    sameSite: 'none',
+    secure: true,
+}
 
 
 dotenv.config()
@@ -26,13 +31,14 @@ export const register = async (req, res) => {
         })
         const userSaved = await newUser.save()
         const token = await createAccessToken({ id: userSaved._id });
-        res.cookie('token', token)
+        res.cookie('token', token, cookieOptions)
         res.json({
             id: userSaved._id,
             username: userSaved.username,
             email: userSaved.email,
             createdAt: userSaved.createdAt,
-            updatedAt: userSaved.updatedAt
+            updatedAt: userSaved.updatedAt,
+            token,
         })
     } catch (error) {
         res.status(500).json({ message: error.message })
@@ -56,13 +62,14 @@ export const login = async (req, res) => {
 
 
         const token = await createAccessToken({ id: userFound._id });
-        res.cookie('token', token)
+        res.cookie('token', token, cookieOptions)
         res.json({
             id: userFound._id,
             username: userFound.username,
             email: userFound.email,
             createdAt: userFound.createdAt,
-            updatedAt: userFound.updatedAt
+            updatedAt: userFound.updatedAt,
+            token,
         })
     } catch (error) {
         res.status(500).json({ message: error.message })
@@ -71,7 +78,8 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
     res.cookie("token", "",
         {
-            expires: new Date(0)
+            expires: new Date(0),
+            ...cookieOptions,
         })
     res.sendStatus(200)
 }
@@ -102,7 +110,7 @@ export const listUsers = async (req, res) => {
 }
 
 export const verifyToken = async (req, res) => {
-    const { token } = req.cookies
+    const token = readToken(req)
     if (!token) return res.status(401).json({ message: "unauthorized no token" });
 
     jwt.verify(token, process.env.TOKEN_SECRET, async (error, user) => {
