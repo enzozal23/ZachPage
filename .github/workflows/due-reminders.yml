@@ -22,12 +22,16 @@ jobs:
           fi
           BASE="${API_URL%/}"
           # Despierta Render (cold start)
+          echo "Despertando API..."
           curl -fsS --retry 8 --retry-all-errors --retry-delay 15 --max-time 30 \
             "$BASE/" >/dev/null || true
           sleep 5
-          curl -fsS --retry 5 --retry-all-errors --retry-delay 20 --max-time 120 \
+          echo "Ejecutando cron de vencimientos..."
+          RESPONSE=$(curl -fsS --retry 5 --retry-all-errors --retry-delay 20 --max-time 120 \
             -X POST "$BASE/api/kanban/reminders/run" \
             -H "Content-Type: application/json" \
-            -H "x-cron-secret: $CRON_SECRET"
-          echo
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "x-cron-trigger: github-actions")
+          echo "Respuesta del servidor:"
+          echo "$RESPONSE"
           echo "Cron de vencimientos OK"

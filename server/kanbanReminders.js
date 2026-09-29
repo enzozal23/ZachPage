@@ -189,11 +189,15 @@ export async function sendTicketDueMail({ ticket, boardName }) {
   return result.recipients.join(', ')
 }
 
-export async function sendDueReminders() {
+export async function sendDueReminders({ trigger = 'interno' } = {}) {
+  const startedAt = new Date().toISOString()
+  await logInfo('Cron de vencimientos: inicio', { trigger, startedAt })
+
   const doc = await Kanban.findOne()
   if (!doc) {
-    await logInfo('Revisión de vencimientos sin tablero guardado')
-    return
+    const summary = { trigger, startedAt, today: todayISO(), reviewed: 0, mails: 0, recipients: [], changed: false, reason: 'sin_tablero' }
+    await logInfo('Cron de vencimientos: sin tablero guardado', summary)
+    return summary
   }
 
   const today = todayISO()
@@ -206,15 +210,18 @@ export async function sendDueReminders() {
     dueTickets.push(ticket)
   }
 
-  await logInfo('Revisando tarjetas por vencer', {
+  await logInfo('Cron de vencimientos: tarjetas candidatas', {
+    trigger,
     today,
-    tickets: doc.tickets.length,
+    ticketsTotales: doc.tickets.length,
     porVencer: dueTickets.length,
+    titulos: dueTickets.map((ticket) => ticket.title).slice(0, 20),
   })
 
   if (!dueTickets.length) {
-    await logInfo('Revisión de vencimientos terminada', { today, reviewed: 0, changed: false })
-    return
+    const summary = { trigger, startedAt, today, reviewed: 0, mails: 0, recipients: [], changed: false, reason: 'nada_por_vencer' }
+    await logInfo('Cron de vencimientos: fin (nada por enviar)', summary)
+    return summary
   }
 
   try {
@@ -225,15 +232,25 @@ export async function sendDueReminders() {
     })
     doc.markModified('tickets')
     await doc.save()
-    await logInfo('Revisión de vencimientos terminada', {
+    const summary = {
+      trigger,
+      startedAt,
+      finishedAt: new Date().toISOString(),
       today,
       reviewed: dueTickets.length,
       mails: result.sent,
       recipients: result.recipients,
       changed: true,
-    })
+    }
+    await logInfo('Cron de vencimientos: fin (mails enviados)', summary)
+    return summary
   } catch (error) {
-    await logError('Falló el aviso diario agrupado', error, { today, tickets: dueTickets.length })
+    await logError('Cron de vencimientos: falló el envío agrupado', error, {
+      trigger,
+      today,
+      tickets: dueTickets.length,
+    })
+    throw error
   }
 }
 
@@ -243,8 +260,8 @@ export function startDueReminders() {
     if (hour !== DIGEST_HOUR || minute > 14) return
     if (lastDigestDay === date) return
     lastDigestDay = date
-    logInfo('Disparo diario de vencimientos (07:00 Argentina)', { date, hour, minute })
-    sendDueReminders().catch((error) => {
+    logInfo('Disparo diario interno de vencimientos (07:00 Argentina)', { date, hour, minute })
+    sendDueReminders({ trigger: 'interno-7am' }).catch((error) => {
       logError('No se pudo revisar los vencimientos', error)
     })
   }

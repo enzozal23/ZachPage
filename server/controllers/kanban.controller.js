@@ -202,12 +202,21 @@ export const testDueReminder = async (req, res) => {
 }
 
 export const runDueReminders = async (req, res) => {
-  await logInfo('Cron externo: revisar vencimientos')
+  const trigger = String(req.headers['x-cron-trigger'] || 'github-actions').slice(0, 80)
+  await logInfo('Cron externo: pedido recibido', {
+    trigger,
+    at: new Date().toISOString(),
+    ip: req.ip,
+  })
   try {
-    await sendDueReminders()
-    res.json({ message: 'Revisión de vencimientos ejecutada.' })
+    const summary = await sendDueReminders({ trigger })
+    await logInfo('Cron externo: pedido terminado', summary)
+    res.json({
+      message: 'Revisión de vencimientos ejecutada.',
+      ...summary,
+    })
   } catch (error) {
-    await logError('Cron externo falló', error)
+    await logError('Cron externo falló', error, { trigger })
     res.status(500).json({ message: error.message || 'No se pudo revisar los vencimientos.' })
   }
 }
