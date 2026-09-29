@@ -72,31 +72,23 @@ export const AuthProvider = ({ children }) => {
     }, [errors])//timeout para que desaparescan los errorres en 1 segundo
 
 
-    useEffect(() => {// COOKIES TOKEN
+    useEffect(() => {
         async function checkLogin() {
-            const token = localStorage.getItem(TOKEN_KEY) || Cookies.get('token')
-
-            if (!token) {
-                setIsAuthenticated(false) //si no hay token setea todo en false
-                setLoading(false);
-
-                return setUser(null)
-            }
             try {
-                const res = await verifyTokenRequest(cookies.token) // peror si hay token con verifyTokenRequest verifica que este en la base de datos
-                console.log(res)
+                const res = await verifyTokenRequest()
                 if (!res.data) {
-                    setIsAuthenticated(false) // si no coinciden el token de la base de datos con la del navegador vuelve a setear en false 
-                    setLoading(false);
+                    clearToken()
+                    setIsAuthenticated(false)
+                    setUser(null)
                     return
                 }
-                setIsAuthenticated(true) // de lo contrario setea  en true y el user con los datos 
+                setIsAuthenticated(true)
                 setUser(res.data)
-                setLoading(false)
-
             } catch (error) {
-                setIsAuthenticated(false), // error que viene de la base de datos
-                    setUser(null)
+                if (error.response?.status === 401) clearToken()
+                setIsAuthenticated(false)
+                setUser(null)
+            } finally {
                 setLoading(false)
             }
         }
