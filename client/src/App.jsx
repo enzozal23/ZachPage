@@ -46,15 +46,15 @@ function AppShell() {
                 <Route path="/vender" element={<SellProductForm />} />
                 <Route path="/ventas" element={<SalesList />} />
                 <Route path="/ventasWeb" element={<SaleWebList />} />
+                <Route
+                  path="/tablero"
+                  element={
+                    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#f4f5f7] text-[#42526e]">Cargando tablero…</div>}>
+                      <TableroKanban />
+                    </Suspense>
+                  }
+                />
               </Route>
-              <Route
-                path="/tablero"
-                element={
-                  <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#f4f5f7] text-[#42526e]">Cargando tablero…</div>}>
-                    <TableroKanban />
-                  </Suspense>
-                }
-              />
               <Route path='*' element={<NotFound />} />
             </Routes>
     </>

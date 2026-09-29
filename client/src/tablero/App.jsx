@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { useKanbanStore } from './hooks/useKanbanStore.js'
-import { useAuth } from './hooks/useAuth.js'
+import { useAuth } from '../context/AuthContext.jsx'
 import BoardSelector from './components/BoardSelector.jsx'
 import Board from './components/Board.jsx'
 import TicketFormModal from './components/TicketFormModal.jsx'
 import QuickAssignPanel from './components/QuickAssignPanel.jsx'
-import LoginPage from './components/LoginPage.jsx'
 import './App.css'
 
 function App() {
-  const auth = useAuth()
+  const { user, loading, logout } = useAuth()
   const store = useKanbanStore()
   const [modalState, setModalState] = useState(null)
   const [importedBatch, setImportedBatch] = useState(null)
@@ -21,18 +20,10 @@ function App() {
     ? importedBatch.ids.map((id) => store.tickets.find((t) => t.id === id)).filter(Boolean)
     : []
 
-  if (auth.status === 'checking') {
+  if (loading) {
     return (
       <div className="tablero-root">
         <div className="auth-loading">Cargando…</div>
-      </div>
-    )
-  }
-
-  if (auth.status !== 'authenticated') {
-    return (
-      <div className="tablero-root">
-        <LoginPage onLogin={auth.loginWithCredentials} />
       </div>
     )
   }
@@ -75,8 +66,8 @@ function App() {
       <Board
         board={currentBoard}
         tickets={store.tickets}
-        userEmail={auth.email}
-        onLogout={auth.logout}
+        userEmail={user?.email}
+        onLogout={logout}
         onAddTicket={(status) => setModalState({ mode: 'create', initialStatus: status })}
         onEditTicket={(ticket) => setModalState({ mode: 'edit', ticket })}
         onDeleteTicket={store.deleteTicket}

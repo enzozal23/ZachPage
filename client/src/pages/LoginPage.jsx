@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form"
 import { useAuth } from "../context/AuthContext"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import zachAdmin from "../../images/zachAdmin.png"
 
@@ -9,6 +9,7 @@ function LoginPage() {
     const { register, handleSubmit, formState: { errors } } = useForm()
     const { signin, errors: loginErrors, isAuthenticated } = useAuth()
     const navigate = useNavigate()
+    const location = useLocation()
     const [loading, setLoading] = useState(false)
 
     const onSubmit = handleSubmit(async (data) => {
@@ -18,8 +19,11 @@ function LoginPage() {
     })
 
     useEffect(() => {
-        if (isAuthenticated) navigate('/products')
-    }, [isAuthenticated, navigate])
+        if (isAuthenticated) {
+            const from = location.state?.from?.pathname || '/products'
+            navigate(from)
+        }
+    }, [isAuthenticated, navigate, location.state])
 
     return (
         <div className='flex h-[calc(100vh-100px)] items-center justify-center'>
