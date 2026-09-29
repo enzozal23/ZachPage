@@ -6,6 +6,19 @@ const boardSchema = new Schema({
   createdAt: String,
 }, { _id: false })
 
+const taskItemSchema = new Schema({
+  id: String,
+  text: String,
+  done: Boolean,
+}, { _id: false })
+
+const commentSchema = new Schema({
+  id: String,
+  text: String,
+  author: String,
+  createdAt: String,
+}, { _id: false })
+
 const ticketSchema = new Schema({
   id: String,
   boardId: String,
@@ -13,18 +26,34 @@ const ticketSchema = new Schema({
   description: String,
   status: String,
   assignee: String,
+  assignees: [String],
+  followers: [String],
   priority: String,
   labels: [String],
   dueDate: String,
   task: String,
+  tasks: [taskItemSchema],
   createdAt: String,
   source: String,
   reminderSentFor: String,
+  comments: [commentSchema],
+}, { _id: false })
+
+const importSchema = new Schema({
+  id: String,
+  fileName: String,
+  boardId: String,
+  boardName: String,
+  imported: Number,
+  skippedNoTitle: Number,
+  createdAt: String,
+  author: String,
 }, { _id: false })
 
 const kanbanSchema = new Schema({
   boards: [boardSchema],
   tickets: [ticketSchema],
+  imports: [importSchema],
 }, { timestamps: true })
 
 export default model('Kanban', kanbanSchema)

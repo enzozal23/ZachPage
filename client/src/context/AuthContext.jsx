@@ -13,6 +13,13 @@ function clearToken() {
     localStorage.removeItem(TOKEN_KEY)
     Cookies.remove('token')
 }
+
+function readError(error) {
+    const data = error.response?.data
+    if (Array.isArray(data)) return data
+    if (data?.message) return [data.message]
+    return ['No se pudo conectar con el servidor.']
+}
 export const useAuth = () => {
     const context = useContext(AuthContext)
     if (!context) {
@@ -37,8 +44,7 @@ export const AuthProvider = ({ children }) => {
             setUser(sessionUser)
             setIsAuthenticated(true)
         } catch (error) {
-            console.log(error.response.data)
-            setErrors(error.response.data)
+            setErrors(readError(error))
         }
     }
     // ⬆️⬇️estas funciones pasan del front los datos (user) hacia el front a traves de auth.js donde estan las direcciones de la api y setean los errores
@@ -52,10 +58,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true)
             setUser(sessionUser)
         } catch (error) {
-            if (Array.isArray(error.response.data)) {
-                return setErrors(error.response.data)
-            }
-            setErrors([error.response.data.message])
+            setErrors(readError(error))
         }
     }
     const logout = () => {

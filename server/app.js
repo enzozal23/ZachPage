@@ -20,7 +20,9 @@ dotenv.config()
 const allowedOrigins = [
     'https://zachpage-frontend.onrender.com',
     'https://www.zachsuplementos.com',
-    'https://zachsuplementos.com'
+    'https://zachsuplementos.com',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
 ];
 
 app.use(cors({

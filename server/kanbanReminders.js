@@ -16,23 +16,53 @@ function findUser(users, assignee) {
   ) || null
 }
 
+function taskLine(ticket) {
+  const pending = Array.isArray(ticket.tasks)
+    ? ticket.tasks.filter((task) => task?.text && !task.done).map((task) => task.text)
+    : []
+  if (pending.length) return `Tareas: ${pending.join('; ')}`
+  const single = String(ticket.task || '').trim()
+  if (!single || single.startsWith('__lexora:')) return ''
+  return `Tarea: ${single}`
+}
+
 export async function sendTicketDueMail({ ticket, boardName }) {
+  const assigneeNames = Array.isArray(ticket.assignees) && ticket.assignees.length
+    ? ticket.assignees
+    : String(ticket.assignee || '').split(',')
+  const followerNames = Array.isArray(ticket.followers) ? ticket.followers : []
+
   await logInfo('Buscando responsable de la tarjeta', {
     ticketId: ticket.id,
     title: ticket.title,
-    assignee: ticket.assignee || '',
+    assignee: assigneeNames.join(', '),
+    followers: followerNames.join(', '),
     dueDate: ticket.dueDate || '',
     boardName: boardName || '',
   })
 
-  const users = await User.find().select('username email')
-  const user = findUser(users, ticket.assignee)
-  if (!user?.email) {
-    const error = new Error('Asigná un responsable que sea un usuario existente.')
+  const lookup = [...assigneeNames, ...followerNames].map((name) => String(name || '').trim()).filter(Boolean)
+  const users = lookup.length
+    ? await User.find({
+      $or: [{ username: { $in: lookup } }, { email: { $in: lookup } }],
+    }).select('username email')
+    : []
+  const matched = []
+  const seen = new Set()
+  for (const name of [...assigneeNames, ...followerNames]) {
+    const user = findUser(users, name)
+    const email = user?.email?.trim().toLowerCase()
+    if (!email || seen.has(email)) continue
+    seen.add(email)
+    matched.push(user)
+  }
+  if (!matched.length) {
+    const error = new Error('Asigná un responsable o un seguidor que sea un usuario existente.')
     error.status = 400
-    await logError('No hay usuario para el responsable', error, {
+    await logError('No hay usuario para el aviso de vencimiento', error, {
       ticketId: ticket.id,
-      assignee: ticket.assignee || '',
+      assignee: assigneeNames.join(', '),
+      followers: followerNames.join(', '),
       users: users.length,
     })
     throw error
@@ -40,21 +70,25 @@ export async function sendTicketDueMail({ ticket, boardName }) {
 
   const due = parseDueDate(ticket.dueDate)
   const when = due ? formatDueDate(due) : 'sin fecha cargada'
-  const name = user.username || user.email
+  const sent = []
 
-  await sendMail({
-    to: user.email,
-    subject: `Vence pronto: ${ticket.title}`,
-    text: [
-      `Hola ${name},`,
-      '',
-      `La tarjeta "${ticket.title}" del tablero ${boardName || 'Kanban'} vence el ${when}.`,
-      ticket.task ? `Tarea: ${ticket.task}` : '',
-      ticket.description ? `\n${ticket.description}` : '',
-    ].filter(Boolean).join('\n'),
-  })
+  for (const user of matched) {
+    const name = user.username || user.email
+    await sendMail({
+      to: user.email,
+      subject: `Lexora — Vence pronto: ${ticket.title}`,
+      text: [
+        `Hola ${name},`,
+        '',
+        `En Lexora, la tarjeta "${ticket.title}" del tablero ${boardName || 'principal'} vence el ${when}.`,
+        taskLine(ticket),
+        ticket.description ? `\n${ticket.description}` : '',
+      ].filter(Boolean).join('\n'),
+    })
+    sent.push(user.email)
+  }
 
-  return user.email
+  return sent.join(', ')
 }
 
 export async function sendDueReminders() {

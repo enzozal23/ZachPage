@@ -1,9 +1,24 @@
-import axios from './axios';
-const API = 'https://zachpage.onrender.com/'
+import axios from './axios'
 
+export const registerRequest = (user) => axios.post('api/register', user)
+export const loginRequest = (user) => axios.post('api/login', user)
+export const verifyTokenRequest = () => axios.get('api/verify')
+export const getUsersRequest = (q = '') => axios.get('api/users', { params: q ? { q } : {} })
 
+let userSearchCache = null
 
-export const registerRequest = user => axios.post(`api/register`, user)
-export const loginRequest = user => axios.post(`api/login`, user)
-export const verifyTokenRequest = () => axios.get(`api/verify`)
-export const getUsersRequest = () => axios.get(`api/users`)
+function matchesUser(user, query) {
+    return `${user.username || ''} ${user.email || ''}`.toLowerCase().includes(query)
+}
+
+export async function searchUsers(q) {
+    const query = String(q || '').trim().toLowerCase()
+    if (query.length < 2) return []
+    if (!userSearchCache) {
+        const res = await getUsersRequest(query)
+        const list = Array.isArray(res.data) ? res.data : []
+        if (list.length > 8) userSearchCache = list
+        else return list.filter((user) => matchesUser(user, query)).slice(0, 8)
+    }
+    return userSearchCache.filter((user) => matchesUser(user, query)).slice(0, 8)
+}

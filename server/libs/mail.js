@@ -4,7 +4,7 @@ import { logError, logInfo } from './appLog.js'
 
 dotenv.config()
 
-const FROM = 'ZachSuplementos <zachsuplementos@gmail.com>'
+const FROM = 'Lexora <zachsuplementos@gmail.com>'
 
 function resendCredentials() {
   const named = ['RESEND_API_KEY', 'RESEND_KEY', 'RESEND', 'RESEND_TOKEN', 'API_KEY_RESEND']
@@ -30,7 +30,7 @@ const transport = nodemailer.createTransport({
 })
 
 async function sendWithResend({ to, subject, text, apiKey }) {
-  const from = process.env.MAIL_FROM || 'ZachSuplementos <onboarding@resend.dev>'
+  const from = process.env.MAIL_FROM || 'Lexora <onboarding@resend.dev>'
   await logInfo('Enviando mail por Resend', { to, subject, from })
 
   const response = await fetch('https://api.resend.com/emails', {

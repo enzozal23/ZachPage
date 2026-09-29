@@ -1,4 +1,5 @@
 import AssigneeSelect from './AssigneeSelect.jsx'
+import { assigneeFields, ticketAssignees } from '../lib/assignees.js'
 
 function pluralize(count, singular, plural) {
   return count === 1 ? singular : plural
@@ -6,7 +7,7 @@ function pluralize(count, singular, plural) {
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-function QuickAssignRow({ ticket, users = [], onUpdateTicket }) {
+function QuickAssignRow({ ticket, onUpdateTicket }) {
   const dateValue = ISO_DATE_RE.test(ticket.dueDate) ? ticket.dueDate : ''
 
   return (
@@ -15,9 +16,8 @@ function QuickAssignRow({ ticket, users = [], onUpdateTicket }) {
         {ticket.title}
       </span>
       <AssigneeSelect
-        value={ticket.assignee}
-        users={users}
-        onChange={(assignee) => onUpdateTicket(ticket.id, { assignee })}
+        value={ticketAssignees(ticket)}
+        onChange={(assignees) => onUpdateTicket(ticket.id, assigneeFields(assignees))}
       />
       <input
         type="date"
@@ -28,7 +28,7 @@ function QuickAssignRow({ ticket, users = [], onUpdateTicket }) {
   )
 }
 
-function QuickAssignPanel({ tickets, summary, users = [], usersError, onUpdateTicket, onClose }) {
+function QuickAssignPanel({ tickets, summary, onUpdateTicket, onClose }) {
   const ticketWord = pluralize(summary.imported, 'ticket', 'tickets')
   const rowWord = pluralize(summary.skippedNoTitle, 'fila', 'filas')
 
@@ -41,8 +41,7 @@ function QuickAssignPanel({ tickets, summary, users = [], usersError, onUpdateTi
             {summary.skippedNoTitle} {rowWord} se {pluralize(summary.skippedNoTitle, 'ignoró', 'ignoraron')}{' '}
             por no tener título.
           </p>
-          <p className="quick-assign-hint">Asigná responsable y fecha sin entrar a cada ticket.</p>
-          {usersError && <p className="form-error">{usersError}</p>}
+          <p className="quick-assign-hint">Asigná responsables y fecha sin entrar a cada ticket.</p>
         </div>
         <button type="button" className="btn-secondary" onClick={onClose}>
           Listo
@@ -51,7 +50,7 @@ function QuickAssignPanel({ tickets, summary, users = [], usersError, onUpdateTi
 
       <div className="quick-assign-list">
         {tickets.map((ticket) => (
-          <QuickAssignRow key={ticket.id} ticket={ticket} users={users} onUpdateTicket={onUpdateTicket} />
+          <QuickAssignRow key={ticket.id} ticket={ticket} onUpdateTicket={onUpdateTicket} />
         ))}
       </div>
     </div>

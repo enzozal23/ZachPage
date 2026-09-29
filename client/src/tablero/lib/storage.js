@@ -6,30 +6,32 @@ export function createDefaultState() {
     name: 'Tablero 1',
     createdAt: new Date().toISOString(),
   }
-  return { boards: [board], tickets: [], selectedBoardId: board.id }
+  return { boards: [board], tickets: [], imports: [], selectedBoardId: board.id }
 }
 
-export function loadState() {
+export function loadStoredState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return createDefaultState()
+    if (!raw) return null
 
     const parsed = JSON.parse(raw)
     if (!parsed || !Array.isArray(parsed.boards) || !Array.isArray(parsed.tickets)) {
-      return createDefaultState()
+      return null
     }
 
     if (parsed.boards.length === 0) {
-      return createDefaultState()
+      return null
     }
 
     if (!parsed.selectedBoardId || !parsed.boards.some((b) => b.id === parsed.selectedBoardId)) {
       parsed.selectedBoardId = parsed.boards[0].id
     }
 
+    if (!Array.isArray(parsed.imports)) parsed.imports = []
+
     return parsed
   } catch {
-    return createDefaultState()
+    return null
   }
 }
 

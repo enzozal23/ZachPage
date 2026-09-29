@@ -98,7 +98,13 @@ export const profile = async (req, res) => {
 
 export const listUsers = async (req, res) => {
     try {
-        const users = await User.find().select('username email').sort({ username: 1 })
+        const q = String(req.query.q || '').trim()
+        if (q.length < 2) return res.json([])
+        const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const match = new RegExp(safe, 'i')
+        const users = await User.find({
+            $or: [{ username: match }, { email: match }],
+        }).select('username email').sort({ username: 1 }).limit(8)
         res.json(users.map((user) => ({
             id: user._id,
             username: user.username || '',

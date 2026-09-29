@@ -4,29 +4,6 @@ import { DEFAULT_COLUMN_ID, DEFAULT_PRIORITY } from '../constants/columns.js'
 const MIN_COLUMNS = 7
 const MAX_CARATULA_LENGTH = 70
 
-const ASSIGNEE_EXCLUDE = new Set([
-  'SA',
-  'SRL',
-  'OK',
-  'ETC',
-  'BCRA',
-  'ART',
-  'IVA',
-  'DNI',
-  'CUIT',
-  'ISSSEP',
-  'ATP',
-  'OPJ',
-  'NOS',
-  'FALTA',
-  'INTIMARON',
-  'INTIMAN',
-  'AUTOMOTORES',
-  'LA',
-  'MS',
-])
-const UPPERCASE_TOKEN_RE = /\b[A-ZÁÉÍÓÚÑ]{2,}\b/g
-
 function getCellText(cell) {
   if (!cell) return ''
   return (cell.textContent || '').replace(/\s+/g, ' ').trim()
@@ -90,12 +67,6 @@ function buildDescription(expediente, juzgado, caratula, novedad) {
   ].join('\n')
 }
 
-function guessAssignee(novedad) {
-  if (!novedad) return ''
-  const matches = novedad.match(UPPERCASE_TOKEN_RE) || []
-  return matches.find((token) => !ASSIGNEE_EXCLUDE.has(token)) || ''
-}
-
 export async function parseWordDocx(file) {
   if (!file.name.toLowerCase().endsWith('.docx')) {
     throw new Error('El archivo seleccionado no es un .docx válido.')
@@ -152,7 +123,7 @@ export async function parseWordDocx(file) {
       title: buildTitle(expediente, caratula),
       description: buildDescription(expediente, juzgado, caratula, novedad),
       status: DEFAULT_COLUMN_ID,
-      assignee: guessAssignee(novedad),
+      assignee: '',
       priority: DEFAULT_PRIORITY,
       labels: [],
       dueDate,

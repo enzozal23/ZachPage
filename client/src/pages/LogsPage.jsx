@@ -37,7 +37,7 @@ function LogsPage() {
           <select
             value={level}
             onChange={(event) => setLevel(event.target.value)}
-            className="bg-zinc-800 border border-zinc-600 rounded px-3 py-2"
+            className="bg-[#2e1c48] border border-[#4e3876] rounded px-3 py-2"
           >
             <option value="">Todos</option>
             <option value="info">Info</option>
@@ -46,7 +46,7 @@ function LogsPage() {
           <button
             type="button"
             onClick={() => load(level)}
-            className="bg-sky-500 px-4 py-2 rounded"
+            className="bg-[#6c4ce6] px-4 py-2 rounded"
           >
             Actualizar
           </button>
@@ -59,16 +59,16 @@ function LogsPage() {
 
       <div className="flex flex-col gap-3">
         {logs.map((entry) => (
-          <article key={entry._id} className="bg-zinc-900 rounded-md p-4">
+          <article key={entry._id} className="bg-[#221538] rounded-md p-4">
             <div className="flex flex-wrap items-center gap-3 mb-2">
-              <span className={entry.level === 'error' ? 'text-red-400 font-semibold' : 'text-sky-300 font-semibold'}>
+              <span className={entry.level === 'error' ? 'text-red-400 font-semibold' : 'text-[#c4b6ff] font-semibold'}>
                 {entry.level}
               </span>
-              <span className="text-zinc-400 text-sm">{formatTime(entry.createdAt)}</span>
+              <span className="text-[#d8d0f2] text-sm">{formatTime(entry.createdAt)}</span>
             </div>
             <p className="mb-2">{entry.message}</p>
             {entry.detail && (
-              <pre className="text-xs text-zinc-300 whitespace-pre-wrap break-words bg-zinc-950 rounded p-3">
+              <pre className="text-xs text-[#d8d0f2] whitespace-pre-wrap break-words bg-[#160f24] rounded p-3">
                 {JSON.stringify(entry.detail, null, 2)}
               </pre>
             )}

@@ -1,7 +1,11 @@
 import { useState } from 'react'
-import JusticeScaleLogo from './JusticeScaleLogo.jsx'
+import inicioIcon from '../../images/inicio.png'
+import loginIcon from '../../images/login.png'
+import tableroIcon from '../../images/tablero.png'
 
-function LoginPage({ onLogin }) {
+const MARKS = [inicioIcon, loginIcon, tableroIcon]
+
+function LoginPage({ onLogin, serverError }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
@@ -22,11 +26,15 @@ function LoginPage({ onLogin }) {
 
   return (
     <div className="login-page">
-      <div className="login-content">
-        <JusticeScaleLogo size={120} />
+      <div className="login-card">
+        <div className="login-reel" aria-hidden="true">
+          {MARKS.map((src) => (
+            <img key={src} src={src} alt="" />
+          ))}
+        </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <h1>Tablero Kanban</h1>
+          <h1>Lexora</h1>
 
           <label>
             Email
@@ -49,7 +57,7 @@ function LoginPage({ onLogin }) {
             />
           </label>
 
-          {error && <p className="form-error">{error}</p>}
+          {(error || serverError) && <p className="form-error">{error || serverError}</p>}
 
           <button type="submit" disabled={busy}>
             {busy ? 'Ingresando…' : 'Ingresar'}

@@ -5,8 +5,7 @@ import axios from 'axios'
 const TOKEN_KEY = 'token'
 
 const instance = axios.create({
-    baseURL: 'https://zachpage.onrender.com/'
-    ,
+    baseURL: import.meta.env.DEV ? '/' : 'https://zachpage.onrender.com/',
     withCredentials: true
 })
 
