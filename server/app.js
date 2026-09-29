@@ -4,6 +4,7 @@ import authRoutes from './routes/auth.routes.js'
 import tasksRoutes from './routes/tasks.routes.js'
 import productsRoutes from './routes/products.routes.js'
 import kanbanRoutes from './routes/kanban.routes.js'
+import logsRoutes from './routes/logs.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -40,6 +41,7 @@ app.use('/api', authRoutes)//rutas api
 app.use('/api', tasksRoutes)
 app.use('/api', productsRoutes)
 app.use('/api', kanbanRoutes)
+app.use('/api', logsRoutes)
 
 
 export default app

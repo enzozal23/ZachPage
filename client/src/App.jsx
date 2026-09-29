@@ -19,6 +19,7 @@ import SellProductForm from './pages/SellProductForm.jsx'
 import SalesList from './pages/SalesList.jsx'
 import HomePage from './pages/HomePage.jsx'
 import SaleWebList from './pages/SaleWebList.jsx'
+import LogsPage from './pages/LogsPage.jsx'
 
 const TableroKanban = lazy(() => import('./tablero/App.jsx'))
 
@@ -46,6 +47,7 @@ function AppShell() {
                 <Route path="/vender" element={<SellProductForm />} />
                 <Route path="/ventas" element={<SalesList />} />
                 <Route path="/ventasWeb" element={<SaleWebList />} />
+                <Route path="/logs" element={<LogsPage />} />
                 <Route
                   path="/tablero"
                   element={

@@ -3,6 +3,7 @@ import Kanban from './models/kanban.model.js'
 import User from './models/user.models.js'
 import { sendMail } from './libs/mail.js'
 import { formatDueDate, isAboutToExpire, parseDueDate, todayISO } from './libs/dueDates.js'
+import { logError, logInfo } from './libs/appLog.js'
 
 const HOUR_MS = 60 * 60 * 1000
 
@@ -16,11 +17,24 @@ function findUser(users, assignee) {
 }
 
 export async function sendTicketDueMail({ ticket, boardName }) {
+  await logInfo('Buscando responsable de la tarjeta', {
+    ticketId: ticket.id,
+    title: ticket.title,
+    assignee: ticket.assignee || '',
+    dueDate: ticket.dueDate || '',
+    boardName: boardName || '',
+  })
+
   const users = await User.find().select('username email')
   const user = findUser(users, ticket.assignee)
   if (!user?.email) {
     const error = new Error('Asigná un responsable que sea un usuario existente.')
     error.status = 400
+    await logError('No hay usuario para el responsable', error, {
+      ticketId: ticket.id,
+      assignee: ticket.assignee || '',
+      users: users.length,
+    })
     throw error
   }
 
@@ -45,10 +59,18 @@ export async function sendTicketDueMail({ ticket, boardName }) {
 
 export async function sendDueReminders() {
   const doc = await Kanban.findOne()
-  if (!doc) return
+  if (!doc) {
+    await logInfo('Revisión de vencimientos sin tablero guardado')
+    return
+  }
 
   const today = todayISO()
   let changed = false
+  let reviewed = 0
+  await logInfo('Revisando tarjetas por vencer', {
+    today,
+    tickets: doc.tickets.length,
+  })
 
   for (const ticket of doc.tickets) {
     if (ticket.status === 'done') continue
@@ -56,6 +78,7 @@ export async function sendDueReminders() {
     if (!due || !isAboutToExpire(due, today)) continue
     if (ticket.reminderSentFor === due) continue
 
+    reviewed += 1
     const board = doc.boards.find((item) => item.id === ticket.boardId)
 
     try {
@@ -64,9 +87,11 @@ export async function sendDueReminders() {
       changed = true
     } catch (error) {
       if (error.status === 400) continue
-      console.error(`[kanban] no se pudo avisar por ${ticket.title}`, error)
+      await logError('Falló el aviso automático', error, { ticketId: ticket.id, title: ticket.title })
     }
   }
+
+  await logInfo('Revisión de vencimientos terminada', { today, reviewed, changed })
 
   if (changed) {
     doc.markModified('tickets')
@@ -77,7 +102,7 @@ export async function sendDueReminders() {
 export function startDueReminders() {
   const run = () => {
     sendDueReminders().catch((error) => {
-      console.error('[kanban] no se pudo enviar el recordatorio', error)
+      logError('No se pudo revisar los vencimientos', error)
     })
   }
 

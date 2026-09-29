@@ -1,5 +1,6 @@
 import Kanban from '../models/kanban.model.js'
 import { sendDueReminders, sendTicketDueMail } from '../kanbanReminders.js'
+import { logError, logInfo } from '../libs/appLog.js'
 
 function publicTicket(ticket) {
   return {
@@ -56,8 +57,9 @@ export const saveKanban = async (req, res) => {
   }
 
   await doc.save()
+  await logInfo('Tablero guardado', { boards: boards.length, tickets: tickets.length })
   sendDueReminders().catch((error) => {
-    console.error('[kanban] no se pudo enviar el recordatorio', error)
+    logError('No se pudo revisar vencimientos después de guardar', error)
   })
 
   res.json({
@@ -67,10 +69,12 @@ export const saveKanban = async (req, res) => {
 }
 
 export const testDueReminder = async (req, res) => {
+  await logInfo('Prueba de mail de vencimiento', { ticketId: req.params.id })
   try {
     const doc = await Kanban.findOne()
     const ticket = doc?.tickets?.find((item) => item.id === req.params.id)
     if (!ticket) {
+      await logError('Tarjeta no encontrada para la prueba', null, { ticketId: req.params.id })
       return res.status(404).json({
         message: 'La tarjeta todavía no está guardada. Esperá un segundo y volvé a probar.',
       })
@@ -78,11 +82,13 @@ export const testDueReminder = async (req, res) => {
 
     const board = doc.boards.find((item) => item.id === ticket.boardId)
     const email = await sendTicketDueMail({ ticket, boardName: board?.name })
+    await logInfo('Prueba de mail enviada', { ticketId: ticket.id, to: email })
     res.json({ message: `Mail enviado a ${email}` })
   } catch (error) {
     const status = error.status || 500
+    await logError('Falló la prueba de mail', error, { ticketId: req.params.id })
     res.status(status).json({
-      message: error.status ? error.message : 'No se pudo enviar el mail.',
+      message: error.message || 'No se pudo enviar el mail.',
     })
   }
 }
