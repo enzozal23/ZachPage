@@ -1,12 +1,24 @@
 const STORAGE_KEY = 'tablero-kanban:data'
+export const DEFAULT_BOARD_NAME = 'Mi tablero'
+const LEGACY_BOARD_NAMES = ['Tablero 1', 'Lexora', 'Mi Tablero']
 
 export function createDefaultState() {
   const board = {
     id: crypto.randomUUID(),
-    name: 'Tablero 1',
+    name: DEFAULT_BOARD_NAME,
     createdAt: new Date().toISOString(),
   }
   return { boards: [board], tickets: [], imports: [], selectedBoardId: board.id }
+}
+
+export function renameLegacyBoards(boards) {
+  let changed = false
+  const next = (boards || []).map((board) => {
+    if (!LEGACY_BOARD_NAMES.includes(board.name)) return board
+    changed = true
+    return { ...board, name: DEFAULT_BOARD_NAME }
+  })
+  return { boards: next, changed }
 }
 
 export function loadStoredState() {

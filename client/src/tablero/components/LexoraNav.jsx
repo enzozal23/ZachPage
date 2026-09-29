@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import inicioIcon from '../../images/inicio.png'
-import tableroIcon from '../../images/tablero.png'
 
 function LexoraNav({
   pathname,
@@ -25,7 +24,6 @@ function LexoraNav({
 
         <nav className="lexora-nav-links" aria-label="Secciones">
           <Link to="/" className={onBoard ? 'is-active' : ''} aria-current={onBoard ? 'page' : undefined}>
-            <img src={tableroIcon} alt="" />
             Tablero
           </Link>
           <Link

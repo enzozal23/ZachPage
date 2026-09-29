@@ -1,6 +1,5 @@
 import { COLUMNS } from '../constants/columns.js'
 import Column from './Column.jsx'
-import tableroIcon from '../../images/tablero.png'
 
 function Board({
   board,
@@ -16,10 +15,7 @@ function Board({
   return (
     <div className="board">
       <div className="board-toolbar">
-        <h2 className="board-name">
-          <img src={tableroIcon} alt="" />
-          {board.name}
-        </h2>
+        <h2 className="board-name">{board.name}</h2>
         <div className="board-toolbar-actions">
           <button
             type="button"

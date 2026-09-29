@@ -1167,8 +1167,7 @@
   opacity: 0.96;
 }
 
-.tablero-root .lexora-brand img,
-.tablero-root .lexora-nav-links a img {
+.tablero-root .lexora-brand img {
   width: 34px;
   height: 34px;
   border-radius: 9px;
@@ -1242,13 +1241,6 @@
   font-size: 0.95rem;
   font-weight: 600;
   transition: background 160ms ease, color 160ms ease;
-}
-
-.tablero-root .lexora-nav-links a img {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  box-shadow: none;
 }
 
 .tablero-root .lexora-nav-links a.is-active,

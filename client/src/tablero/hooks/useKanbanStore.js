@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { loadStoredState, createDefaultState, clearStorage } from '../lib/storage.js'
+import { loadStoredState, createDefaultState, clearStorage, renameLegacyBoards } from '../lib/storage.js'
 import { getKanbanRequest, saveKanbanRequest } from '../../api/kanban.js'
 import { DEFAULT_COLUMN_ID, DEFAULT_PRIORITY } from '../constants/columns.js'
 import { assigneeFields, ticketAssignees } from '../lib/assignees.js'
@@ -119,6 +119,12 @@ export function useKanbanStore() {
         const res = await getKanbanRequest()
         let remote = unpackKanban(res.data)
         let mustSave = false
+
+        const renamed = renameLegacyBoards(remote.boards)
+        if (renamed.changed) {
+          remote = { ...remote, boards: renamed.boards }
+          mustSave = true
+        }
 
         if (!remote.boards.length) {
           if (stored?.boards?.length) {
