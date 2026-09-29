@@ -147,7 +147,7 @@ function App() {
               store.deleteTicket(id)
               if (id === ticketId) navigate('/', { replace: true })
             }}
-            onMoveTicket={(id, status) => store.updateTicket(id, { status })}
+            onMoveTicket={store.moveTicket}
             onResetAll={() => {
               store.resetAll()
               setCreating(null)

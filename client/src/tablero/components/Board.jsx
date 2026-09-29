@@ -1,4 +1,4 @@
-import { COLUMNS } from '../constants/columns.js'
+import { COLUMNS, ticketColumnId } from '../constants/columns.js'
 import Column from './Column.jsx'
 
 function Board({
@@ -36,7 +36,7 @@ function Board({
           <Column
             key={column.id}
             column={column}
-            tickets={tickets.filter((t) => t.status === column.id)}
+            tickets={tickets.filter((ticket) => ticketColumnId(ticket) === column.id)}
             onAddTicket={onAddTicket}
             onEditTicket={onEditTicket}
             onDeleteTicket={onDeleteTicket}

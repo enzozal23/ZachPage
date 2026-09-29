@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadStoredState, createDefaultState, clearStorage, renameLegacyBoards } from '../lib/storage.js'
 import { getKanbanRequest, saveKanbanRequest } from '../../api/kanban.js'
-import { DEFAULT_COLUMN_ID, DEFAULT_PRIORITY } from '../constants/columns.js'
+import { DEFAULT_COLUMN_ID, DEFAULT_PRIORITY, PENDING_COLUMN_ID, needsAssignment } from '../constants/columns.js'
 import { assigneeFields, ticketAssignees } from '../lib/assignees.js'
 import { ticketTasks } from '../lib/tasks.js'
 import { packKanban, unpackKanban } from '../lib/persist.js'
@@ -296,7 +296,36 @@ export function useKanbanStore() {
   const updateTicket = useCallback((id, data) => {
     update((prev) => ({
       ...prev,
-      tickets: prev.tickets.map((ticket) => (ticket.id === id ? { ...ticket, ...data } : ticket)),
+      tickets: prev.tickets.map((ticket) => {
+        if (ticket.id !== id) return ticket
+        const next = { ...ticket, ...data }
+        if (Object.prototype.hasOwnProperty.call(data, 'assignees') || Object.prototype.hasOwnProperty.call(data, 'assignee')) {
+          Object.assign(next, assigneeFields(data.assignees ?? data.assignee ?? next.assignees ?? next.assignee))
+        }
+        if (needsAssignment(next)) {
+          next.status = PENDING_COLUMN_ID
+        } else if (next.status === PENDING_COLUMN_ID) {
+          next.status = 'todo'
+        }
+        return next
+      }),
+    }))
+  }, [update])
+
+  const moveTicket = useCallback((id, status) => {
+    update((prev) => ({
+      ...prev,
+      tickets: prev.tickets.map((ticket) => {
+        if (ticket.id !== id) return ticket
+        const next = { ...ticket, status }
+        if (needsAssignment(next)) {
+          return { ...next, status: PENDING_COLUMN_ID }
+        }
+        if (status === PENDING_COLUMN_ID) {
+          return { ...next, status: 'todo' }
+        }
+        return next
+      }),
     }))
   }, [update])
 
@@ -467,6 +496,7 @@ export function useKanbanStore() {
     selectBoard,
     createTicket,
     updateTicket,
+    moveTicket,
     deleteTicket,
     importTickets,
     addTicketTask,

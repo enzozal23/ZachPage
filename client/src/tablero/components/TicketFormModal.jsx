@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { COLUMNS, PRIORITIES, DEFAULT_PRIORITY } from '../constants/columns.js'
+import { COLUMNS, PRIORITIES, DEFAULT_PRIORITY, ticketColumnId } from '../constants/columns.js'
 import AssigneeSelect from './AssigneeSelect.jsx'
 import { assigneeFields, ticketAssignees, ticketFollowers } from '../lib/assignees.js'
 import { visibleLabels } from '../lib/persist.js'
@@ -10,7 +10,7 @@ function buildInitialForm(ticket, initialStatus) {
     return {
       title: ticket.title,
       description: ticket.description || '',
-      status: ticket.status,
+      status: ticketColumnId(ticket),
       assignees: ticketAssignees(ticket),
       followers: ticketFollowers(ticket),
       priority: ticket.priority || DEFAULT_PRIORITY,
