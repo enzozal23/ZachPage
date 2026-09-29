@@ -4,7 +4,11 @@ import { logError, logInfo } from './appLog.js'
 
 dotenv.config()
 
-const FROM = 'Lexora <zachsuplementos@gmail.com>'
+function mailFrom() {
+  const user = process.env.GMAIL_USER?.trim()
+  if (user) return `Lexora <${user}>`
+  return 'Lexora <zachsuplementos@gmail.com>'
+}
 
 function resendCredentials() {
   const named = ['RESEND_API_KEY', 'RESEND_KEY', 'RESEND', 'RESEND_TOKEN', 'API_KEY_RESEND']
@@ -14,6 +18,10 @@ function resendCredentials() {
   const fuzzy = Object.keys(process.env).find((key) => /resend/i.test(key) && process.env[key])
   if (fuzzy) return { name: fuzzy, value: process.env[fuzzy] }
   return null
+}
+
+function gmailConfigured() {
+  return Boolean(process.env.GMAIL_USER?.trim() && process.env.GMAIL_PASS?.trim())
 }
 
 const transport = nodemailer.createTransport({
@@ -65,7 +73,7 @@ async function sendWithGmail({ to, subject, text }) {
   })
 
   const result = await transport.sendMail({
-    from: FROM,
+    from: mailFrom(),
     to,
     subject,
     text,
@@ -83,14 +91,26 @@ async function sendWithGmail({ to, subject, text }) {
 export async function sendMail({ to, subject, text }) {
   const onRender = Boolean(process.env.RENDER)
   const resend = resendCredentials()
+  const gmail = gmailConfigured()
 
   const pistas = Object.keys(process.env).filter((key) => /resend|mail|gmail/i.test(key))
   await logInfo('Revisando cómo enviar el mail', {
+    gmailConfigurado: gmail,
     resendConfigurada: Boolean(resend),
     nombreVariable: resend?.name || 'no encontré ninguna variable con resend',
     variablesParecidas: pistas,
     enRender: onRender,
   })
+
+  if (gmail) {
+    try {
+      return await sendWithGmail({ to, subject, text })
+    } catch (error) {
+      await logError('Gmail no aceptó la conexión', error, { to, subject })
+      if (!resend) throw error
+      await logInfo('Probando Resend porque Gmail falló', { to, subject })
+    }
+  }
 
   if (resend) {
     try {
@@ -101,19 +121,11 @@ export async function sendMail({ to, subject, text }) {
     }
   }
 
-  if (onRender) {
-    const error = new Error(
-      'La clave de Resend no se encontró. En Render tiene que llamarse RESEND_API_KEY, o el nombre tiene que incluir la palabra resend. El timeout anterior fue Gmail, no Resend.',
-    )
-    error.code = 'ETIMEDOUT'
-    await logError('No se puede usar SMTP en Render', error, { to, subject })
-    throw error
-  }
-
-  try {
-    return await sendWithGmail({ to, subject, text })
-  } catch (error) {
-    await logError('Gmail no aceptó la conexión', error, { to, subject })
-    throw error
-  }
+  const error = new Error(
+    gmail
+      ? 'Gmail falló y no hay otra vía de envío configurada.'
+      : 'Configurá GMAIL_USER y GMAIL_PASS en Render, o una clave de Resend.',
+  )
+  await logError('No hay forma de enviar el mail', error, { to, subject, enRender: onRender })
+  throw error
 }
