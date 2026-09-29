@@ -45,5 +45,9 @@ app.use('/api', productsRoutes)
 app.use('/api', kanbanRoutes)
 app.use('/api', logsRoutes)
 
+app.get('/', (_req, res) => {
+    res.redirect('https://zachpage-frontend.onrender.com/')
+})
+
 
 export default app

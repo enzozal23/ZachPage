@@ -1,7 +1,7 @@
 
 
 import { lazy, Suspense } from 'react'
-import { Routes, Route, HashRouter, useLocation } from 'react-router-dom'
+import { Routes, Route, BrowserRouter, useLocation } from 'react-router-dom'
 // import RegisterPage from './pages/RegisterPage.jsx'
 // import LoginPage from './pages/LoginPage.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
@@ -72,9 +72,9 @@ function App() {
     <AuthProvider>
       <TaskProvider>
         <ProductsProvider>
-          <HashRouter>
+          <BrowserRouter>
             <AppShell />
-          </HashRouter>
+          </BrowserRouter>
         </ProductsProvider>
       </TaskProvider>
     </AuthProvider>
