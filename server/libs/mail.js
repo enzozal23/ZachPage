@@ -4,88 +4,33 @@ import { logError, logInfo } from './appLog.js'
 
 dotenv.config()
 
-function mailFrom() {
-  const user = process.env.GMAIL_USER?.trim() || process.env.MAIL_FROM_EMAIL?.trim()
-  if (user) return { name: 'Lexora', email: user }
-  return { name: 'Lexora', email: 'suplementoszach@gmail.com' }
-}
-
-function mailFromString() {
-  const { name, email } = mailFrom()
-  return `${name} <${email}>`
-}
-
-function envKey(...names) {
-  for (const name of names) {
-    if (process.env[name]?.trim()) return { name, value: process.env[name].trim() }
-  }
-  return null
-}
-
-function brevoCredentials() {
-  return envKey('BREVO_API_KEY', 'SENDINBLUE_API_KEY', 'SIB_API_KEY')
-}
+const FROM = 'ZachSuplementos <zachsuplementos@gmail.com>'
 
 function resendCredentials() {
-  const named = envKey('RESEND_API_KEY', 'RESEND_KEY', 'RESEND', 'RESEND_TOKEN', 'API_KEY_RESEND', 'KEY_RESEND')
-  if (named) return named
+  const named = ['RESEND_API_KEY', 'RESEND_KEY', 'RESEND', 'RESEND_TOKEN', 'API_KEY_RESEND']
+  for (const name of named) {
+    if (process.env[name]) return { name, value: process.env[name] }
+  }
   const fuzzy = Object.keys(process.env).find((key) => /resend/i.test(key) && process.env[key])
   if (fuzzy) return { name: fuzzy, value: process.env[fuzzy] }
   return null
 }
 
-function gmailConfigured() {
-  return Boolean(process.env.GMAIL_USER?.trim() && process.env.GMAIL_PASS?.trim())
-}
-
-function createGmailTransport(port, secure) {
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port,
-    secure,
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-  })
-}
-
-async function sendWithBrevo({ to, subject, text, apiKey }) {
-  const sender = mailFrom()
-  await logInfo('Enviando mail por Brevo', { to, subject, from: `${sender.name} <${sender.email}>` })
-
-  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'api-key': apiKey,
-      'Content-Type': 'application/json',
-      accept: 'application/json',
-    },
-    body: JSON.stringify({
-      sender,
-      to: [{ email: to }],
-      subject,
-      textContent: text,
-    }),
-  })
-
-  const body = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const error = new Error(body?.message || body?.error || `Brevo respondió ${response.status}`)
-    error.status = response.status
-    error.response = JSON.stringify(body)
-    throw error
-  }
-
-  await logInfo('Mail aceptado por Brevo', { to, subject, id: body.messageId || body.id })
-  return body
-}
+const transport = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
+})
 
 async function sendWithResend({ to, subject, text, apiKey }) {
-  const from = process.env.MAIL_FROM || mailFromString()
+  const from = process.env.MAIL_FROM || 'ZachSuplementos <onboarding@resend.dev>'
   await logInfo('Enviando mail por Resend', { to, subject, from })
 
   const response = await fetch('https://api.resend.com/emails', {
@@ -105,84 +50,47 @@ async function sendWithResend({ to, subject, text, apiKey }) {
     throw error
   }
 
-  await logInfo('Mail aceptado por Resend', { to, subject, id: body.id })
+  await logInfo('Mail aceptado por HTTPS', { to, subject, id: body.id })
   return body
 }
 
 async function sendWithGmail({ to, subject, text }) {
-  const attempts = [
-    { port: 587, secure: false },
-    { port: 465, secure: true },
-  ]
-  let lastError = null
+  await logInfo('Enviando mail por SMTP', {
+    to,
+    subject,
+    host: 'smtp.gmail.com',
+    port: 587,
+    fromUser: process.env.GMAIL_USER || 'GMAIL_USER vacío',
+    passwordConfigured: Boolean(process.env.GMAIL_PASS),
+  })
 
-  for (const attempt of attempts) {
-    await logInfo('Enviando mail por SMTP', {
-      to,
-      subject,
-      host: 'smtp.gmail.com',
-      port: attempt.port,
-      fromUser: process.env.GMAIL_USER || 'GMAIL_USER vacío',
-      passwordConfigured: Boolean(process.env.GMAIL_PASS),
-    })
-    try {
-      const result = await createGmailTransport(attempt.port, attempt.secure).sendMail({
-        from: mailFromString(),
-        to,
-        subject,
-        text,
-      })
-      await logInfo('Gmail aceptó el mail', {
-        to,
-        subject,
-        messageId: result.messageId,
-        response: result.response,
-        port: attempt.port,
-      })
-      return result
-    } catch (error) {
-      lastError = error
-      await logError('Gmail no aceptó la conexión', error, { to, subject, port: attempt.port })
-    }
-  }
+  const result = await transport.sendMail({
+    from: FROM,
+    to,
+    subject,
+    text,
+  })
 
-  throw lastError
+  await logInfo('Gmail aceptó el mail', {
+    to,
+    subject,
+    messageId: result.messageId,
+    response: result.response,
+  })
+  return result
 }
 
 export async function sendMail({ to, subject, text }) {
   const onRender = Boolean(process.env.RENDER)
-  const brevo = brevoCredentials()
   const resend = resendCredentials()
-  const gmail = gmailConfigured()
 
+  const pistas = Object.keys(process.env).filter((key) => /resend|mail|gmail/i.test(key))
   await logInfo('Revisando cómo enviar el mail', {
-    brevoConfigurado: Boolean(brevo),
-    gmailConfigurado: gmail,
     resendConfigurada: Boolean(resend),
+    nombreVariable: resend?.name || 'no encontré ninguna variable con resend',
+    variablesParecidas: pistas,
     enRender: onRender,
   })
-
-  if (brevo) {
-    try {
-      return await sendWithBrevo({ to, subject, text, apiKey: brevo.value })
-    } catch (error) {
-      await logError('Falló el envío por Brevo', error, { to, subject, nombreVariable: brevo.name })
-      throw error
-    }
-  }
-
-  if (gmail && !onRender) {
-    try {
-      return await sendWithGmail({ to, subject, text })
-    } catch (error) {
-      if (!resend) throw error
-      await logInfo('Probando Resend porque Gmail falló', { to, subject })
-    }
-  }
-
-  if (gmail && onRender) {
-    await logInfo('Gmail SMTP omitido en Render (puertos bloqueados). Usá BREVO_API_KEY.', { to, subject })
-  }
 
   if (resend) {
     try {
@@ -193,9 +101,19 @@ export async function sendMail({ to, subject, text }) {
     }
   }
 
-  const error = new Error(
-    'Configurá BREVO_API_KEY en Render. Gmail SMTP no funciona ahí y Resend sin dominio solo manda a tu mail.',
-  )
-  await logError('No hay forma de enviar el mail', error, { to, subject, enRender: onRender })
-  throw error
+  if (onRender) {
+    const error = new Error(
+      'La clave de Resend no se encontró. En Render tiene que llamarse RESEND_API_KEY, o el nombre tiene que incluir la palabra resend. El timeout anterior fue Gmail, no Resend.',
+    )
+    error.code = 'ETIMEDOUT'
+    await logError('No se puede usar SMTP en Render', error, { to, subject })
+    throw error
+  }
+
+  try {
+    return await sendWithGmail({ to, subject, text })
+  } catch (error) {
+    await logError('Gmail no aceptó la conexión', error, { to, subject })
+    throw error
+  }
 }

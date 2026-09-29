@@ -117,13 +117,6 @@ function App() {
           onToggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
           user={user}
           onLogout={logout}
-          boards={store.boards}
-          selectedBoardId={store.selectedBoardId}
-          onSelectBoard={(boardId) => {
-            store.selectBoard(boardId)
-            setImportedBatch(null)
-          }}
-          onCreateBoard={store.createBoard}
         />
 
         {store.saveError && <p className="board-save-error">{store.saveError}</p>}
