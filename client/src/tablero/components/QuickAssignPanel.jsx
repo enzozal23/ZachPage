@@ -1,10 +1,12 @@
+import AssigneeSelect from './AssigneeSelect.jsx'
+
 function pluralize(count, singular, plural) {
   return count === 1 ? singular : plural
 }
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-function QuickAssignRow({ ticket, onUpdateTicket }) {
+function QuickAssignRow({ ticket, users = [], onUpdateTicket }) {
   const dateValue = ISO_DATE_RE.test(ticket.dueDate) ? ticket.dueDate : ''
 
   return (
@@ -12,11 +14,10 @@ function QuickAssignRow({ ticket, onUpdateTicket }) {
       <span className="quick-assign-title" title={ticket.title}>
         {ticket.title}
       </span>
-      <input
-        type="text"
-        placeholder="Responsable"
+      <AssigneeSelect
         value={ticket.assignee}
-        onChange={(e) => onUpdateTicket(ticket.id, { assignee: e.target.value })}
+        users={users}
+        onChange={(assignee) => onUpdateTicket(ticket.id, { assignee })}
       />
       <input
         type="date"
@@ -27,7 +28,7 @@ function QuickAssignRow({ ticket, onUpdateTicket }) {
   )
 }
 
-function QuickAssignPanel({ tickets, summary, onUpdateTicket, onClose }) {
+function QuickAssignPanel({ tickets, summary, users = [], usersError, onUpdateTicket, onClose }) {
   const ticketWord = pluralize(summary.imported, 'ticket', 'tickets')
   const rowWord = pluralize(summary.skippedNoTitle, 'fila', 'filas')
 
@@ -41,6 +42,7 @@ function QuickAssignPanel({ tickets, summary, onUpdateTicket, onClose }) {
             por no tener título.
           </p>
           <p className="quick-assign-hint">Asigná responsable y fecha sin entrar a cada ticket.</p>
+          {usersError && <p className="form-error">{usersError}</p>}
         </div>
         <button type="button" className="btn-secondary" onClick={onClose}>
           Listo
@@ -49,7 +51,7 @@ function QuickAssignPanel({ tickets, summary, onUpdateTicket, onClose }) {
 
       <div className="quick-assign-list">
         {tickets.map((ticket) => (
-          <QuickAssignRow key={ticket.id} ticket={ticket} onUpdateTicket={onUpdateTicket} />
+          <QuickAssignRow key={ticket.id} ticket={ticket} users={users} onUpdateTicket={onUpdateTicket} />
         ))}
       </div>
     </div>

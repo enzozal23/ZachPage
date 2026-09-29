@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useKanbanStore } from './hooks/useKanbanStore.js'
+import { useUsers } from './hooks/useUsers.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import BoardSelector from './components/BoardSelector.jsx'
 import Board from './components/Board.jsx'
@@ -9,6 +10,7 @@ import './App.css'
 
 function App() {
   const { user, loading, logout } = useAuth()
+  const { users, error: usersError } = useUsers()
   const store = useKanbanStore()
   const [modalState, setModalState] = useState(null)
   const [importedBatch, setImportedBatch] = useState(null)
@@ -20,7 +22,7 @@ function App() {
     ? importedBatch.ids.map((id) => store.tickets.find((t) => t.id === id)).filter(Boolean)
     : []
 
-  if (loading) {
+  if (loading || !store.ready) {
     return (
       <div className="tablero-root">
         <div className="auth-loading">Cargando…</div>
@@ -49,6 +51,8 @@ function App() {
         <QuickAssignPanel
           tickets={importedTickets}
           summary={importedBatch.summary}
+          users={users}
+          usersError={usersError}
           onUpdateTicket={store.updateTicket}
           onClose={() => setImportedBatch(null)}
         />
@@ -94,6 +98,8 @@ function App() {
           mode={modalState.mode}
           ticket={modalState.ticket}
           initialStatus={modalState.initialStatus}
+          users={users}
+          usersError={usersError}
           onClose={() => setModalState(null)}
           onSave={(data) => {
             if (modalState.mode === 'edit') {

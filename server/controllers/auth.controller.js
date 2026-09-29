@@ -88,6 +88,19 @@ export const profile = async (req, res) => {
     })
 }
 
+export const listUsers = async (req, res) => {
+    try {
+        const users = await User.find().select('username email').sort({ username: 1 })
+        res.json(users.map((user) => ({
+            id: user._id,
+            username: user.username || '',
+            email: user.email,
+        })))
+    } catch (error) {
+        res.status(500).json({ message: error.message })
+    }
+}
+
 export const verifyToken = async (req, res) => {
     const { token } = req.cookies
     if (!token) return res.status(401).json({ message: "unauthorized no token" });

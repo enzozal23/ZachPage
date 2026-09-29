@@ -1,19 +1,91 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadState, saveState, createDefaultState, clearStorage } from '../lib/storage.js'
+import { getKanbanRequest, saveKanbanRequest } from '../../api/kanban.js'
 import { DEFAULT_COLUMN_ID, DEFAULT_PRIORITY } from '../constants/columns.js'
 
+const SELECTED_KEY = 'tablero-kanban:selectedBoardId'
+
+function readSelected() {
+  try {
+    return localStorage.getItem(SELECTED_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
+function writeSelected(id) {
+  try {
+    if (id) localStorage.setItem(SELECTED_KEY, id)
+  } catch {
+    // el tablero sigue usable si el navegador bloquea storage
+  }
+}
+
+function pickSelected(boards, preferred) {
+  if (preferred && boards.some((board) => board.id === preferred)) return preferred
+  return boards[0]?.id || null
+}
+
 export function useKanbanStore() {
-  const [state, setState] = useState(loadState)
+  const [state, setState] = useState(null)
+  const [ready, setReady] = useState(false)
+  const dirty = useRef(false)
 
   useEffect(() => {
-    saveState(state)
-  }, [state])
+    let cancelled = false
 
-  const selectedBoardId = state.selectedBoardId
+    async function load() {
+      const local = loadState()
+      try {
+        const res = await getKanbanRequest()
+        let remote = res.data
+        if (!remote?.boards?.length) {
+          const saved = await saveKanbanRequest({
+            boards: local.boards,
+            tickets: local.tickets,
+          })
+          remote = saved.data
+        }
+        if (cancelled) return
+        const boards = remote.boards
+        const selectedBoardId = pickSelected(boards, readSelected() || local.selectedBoardId)
+        writeSelected(selectedBoardId)
+        const next = { boards, tickets: remote.tickets || [], selectedBoardId }
+        saveState(next)
+        setState(next)
+      } catch {
+        if (!cancelled) setState(local)
+      } finally {
+        if (!cancelled) setReady(true)
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!ready || !state || !dirty.current) return
+    saveState(state)
+    writeSelected(state.selectedBoardId)
+    const handle = setTimeout(() => {
+      saveKanbanRequest({ boards: state.boards, tickets: state.tickets }).catch(() => {})
+    }, 500)
+    return () => clearTimeout(handle)
+  }, [state, ready])
+
+  const update = useCallback((recipe) => {
+    dirty.current = true
+    setState((prev) => recipe(prev))
+  }, [])
+
+  const selectedBoardId = state?.selectedBoardId
 
   const tickets = useMemo(
-    () => state.tickets.filter((t) => t.boardId === selectedBoardId),
-    [state.tickets, selectedBoardId],
+    () => (state?.tickets || []).filter((ticket) => ticket.boardId === selectedBoardId),
+    [state?.tickets, selectedBoardId],
   )
 
   const createBoard = useCallback((name) => {
@@ -24,19 +96,21 @@ export function useKanbanStore() {
       name: trimmed,
       createdAt: new Date().toISOString(),
     }
-    setState((prev) => ({
+    update((prev) => ({
       ...prev,
       boards: [...prev.boards, board],
       selectedBoardId: board.id,
     }))
-  }, [])
+    writeSelected(board.id)
+  }, [update])
 
   const selectBoard = useCallback((boardId) => {
+    writeSelected(boardId)
     setState((prev) => ({ ...prev, selectedBoardId: boardId }))
   }, [])
 
   const createTicket = useCallback((data) => {
-    setState((prev) => {
+    update((prev) => {
       const ticket = {
         id: crypto.randomUUID(),
         boardId: prev.selectedBoardId,
@@ -53,50 +127,53 @@ export function useKanbanStore() {
       }
       return { ...prev, tickets: [...prev.tickets, ticket] }
     })
-  }, [])
+  }, [update])
 
   const updateTicket = useCallback((id, data) => {
-    setState((prev) => ({
+    update((prev) => ({
       ...prev,
-      tickets: prev.tickets.map((t) => (t.id === id ? { ...t, ...data } : t)),
+      tickets: prev.tickets.map((ticket) => (ticket.id === id ? { ...ticket, ...data } : ticket)),
     }))
-  }, [])
+  }, [update])
 
   const deleteTicket = useCallback((id) => {
-    setState((prev) => ({ ...prev, tickets: prev.tickets.filter((t) => t.id !== id) }))
-  }, [])
+    update((prev) => ({ ...prev, tickets: prev.tickets.filter((ticket) => ticket.id !== id) }))
+  }, [update])
 
-  const importTickets = useCallback(
-    (partialTickets) => {
-      const now = new Date().toISOString()
-      const newTickets = partialTickets.map((t) => ({
+  const importTickets = useCallback((partialTickets) => {
+    const now = new Date().toISOString()
+    let created = []
+    update((prev) => {
+      created = partialTickets.map((ticket) => ({
         id: crypto.randomUUID(),
-        boardId: selectedBoardId,
-        title: t.title,
-        description: t.description || '',
-        status: t.status || DEFAULT_COLUMN_ID,
-        assignee: t.assignee || '',
-        priority: t.priority || DEFAULT_PRIORITY,
-        labels: t.labels || [],
-        dueDate: t.dueDate || '',
+        boardId: prev.selectedBoardId,
+        title: ticket.title,
+        description: ticket.description || '',
+        status: ticket.status || DEFAULT_COLUMN_ID,
+        assignee: ticket.assignee || '',
+        priority: ticket.priority || DEFAULT_PRIORITY,
+        labels: ticket.labels || [],
+        dueDate: ticket.dueDate || '',
         task: '',
         createdAt: now,
         source: 'word',
       }))
-      setState((prev) => ({ ...prev, tickets: [...prev.tickets, ...newTickets] }))
-      return newTickets
-    },
-    [selectedBoardId],
-  )
+      return { ...prev, tickets: [...prev.tickets, ...created] }
+    })
+    return created
+  }, [update])
 
-  // TODO: botón provisorio de reset, sacar cuando no se necesite más para testing
   const resetAll = useCallback(() => {
     clearStorage()
-    setState(createDefaultState())
+    const next = createDefaultState()
+    writeSelected(next.selectedBoardId)
+    dirty.current = true
+    setState(next)
   }, [])
 
   return {
-    boards: state.boards,
+    ready,
+    boards: state?.boards || [],
     tickets,
     selectedBoardId,
     createBoard,

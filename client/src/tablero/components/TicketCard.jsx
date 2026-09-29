@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { testDueReminderRequest } from '../../api/kanban.js'
+
 const PRIORITY_CLASS = {
   Alta: 'priority-alta',
   Media: 'priority-media',
@@ -5,6 +8,23 @@ const PRIORITY_CLASS = {
 }
 
 function TicketCard({ ticket, onEdit, onDelete }) {
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState(null)
+
+  async function handleTestMail(event) {
+    event.stopPropagation()
+    setBusy(true)
+    setNotice(null)
+    try {
+      const res = await testDueReminderRequest(ticket.id)
+      setNotice(res.data?.message || 'Mail enviado.')
+    } catch (error) {
+      setNotice(error.response?.data?.message || 'No se pudo enviar el mail.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="ticket-card" onClick={() => onEdit(ticket)}>
       <div className="ticket-card-header">
@@ -46,6 +66,11 @@ function TicketCard({ ticket, onEdit, onDelete }) {
         <span>{ticket.assignee || 'Sin asignar'}</span>
         {ticket.dueDate && <span>{ticket.dueDate}</span>}
       </div>
+
+      <button type="button" className="ticket-test-mail" onClick={handleTestMail} disabled={busy}>
+        {busy ? 'Enviando…' : 'Probar mail'}
+      </button>
+      {notice && <p className="ticket-test-notice">{notice}</p>}
     </div>
   )
 }

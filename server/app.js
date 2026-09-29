@@ -3,6 +3,7 @@ import morgan from 'morgan'
 import authRoutes from './routes/auth.routes.js'
 import tasksRoutes from './routes/tasks.routes.js'
 import productsRoutes from './routes/products.routes.js'
+import kanbanRoutes from './routes/kanban.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -33,11 +34,12 @@ app.use(cors({
     credentials: true
 }));
 app.use(morgan('dev'))//ver las peticiones
-app.use(express.json())//consola pueda leer json del body
+app.use(express.json({ limit: '2mb' }))
 app.use(cookieParser())//
 app.use('/api', authRoutes)//rutas api
 app.use('/api', tasksRoutes)
 app.use('/api', productsRoutes)
+app.use('/api', kanbanRoutes)
 
 
 export default app

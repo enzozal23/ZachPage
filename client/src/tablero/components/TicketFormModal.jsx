@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { COLUMNS, PRIORITIES, DEFAULT_PRIORITY } from '../constants/columns.js'
+import AssigneeSelect from './AssigneeSelect.jsx'
 
 function buildInitialForm(ticket, initialStatus) {
   if (ticket) {
@@ -26,7 +27,7 @@ function buildInitialForm(ticket, initialStatus) {
   }
 }
 
-function TicketFormModal({ mode, ticket, initialStatus, onClose, onSave }) {
+function TicketFormModal({ mode, ticket, initialStatus, users = [], usersError, onClose, onSave }) {
   const [form, setForm] = useState(() => buildInitialForm(ticket, initialStatus))
   const [error, setError] = useState(null)
 
@@ -108,11 +109,12 @@ function TicketFormModal({ mode, ticket, initialStatus, onClose, onSave }) {
           <div className="form-row">
             <label>
               Responsable
-              <input
-                type="text"
+              <AssigneeSelect
                 value={form.assignee}
-                onChange={(e) => handleChange('assignee', e.target.value)}
+                users={users}
+                onChange={(assignee) => handleChange('assignee', assignee)}
               />
+              {usersError && <span className="form-error">{usersError}</span>}
             </label>
 
             <label>
