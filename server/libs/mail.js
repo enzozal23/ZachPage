@@ -24,18 +24,20 @@ function gmailConfigured() {
   return Boolean(process.env.GMAIL_USER?.trim() && process.env.GMAIL_PASS?.trim())
 }
 
-const transport = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
-})
+function createGmailTransport(port, secure) {
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port,
+    secure,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+  })
+}
 
 async function sendWithResend({ to, subject, text, apiKey }) {
   const from = process.env.MAIL_FROM || 'Lexora <onboarding@resend.dev>'
@@ -63,29 +65,43 @@ async function sendWithResend({ to, subject, text, apiKey }) {
 }
 
 async function sendWithGmail({ to, subject, text }) {
-  await logInfo('Enviando mail por SMTP', {
-    to,
-    subject,
-    host: 'smtp.gmail.com',
-    port: 587,
-    fromUser: process.env.GMAIL_USER || 'GMAIL_USER vacío',
-    passwordConfigured: Boolean(process.env.GMAIL_PASS),
-  })
+  const attempts = [
+    { port: 587, secure: false },
+    { port: 465, secure: true },
+  ]
+  let lastError = null
 
-  const result = await transport.sendMail({
-    from: mailFrom(),
-    to,
-    subject,
-    text,
-  })
+  for (const attempt of attempts) {
+    await logInfo('Enviando mail por SMTP', {
+      to,
+      subject,
+      host: 'smtp.gmail.com',
+      port: attempt.port,
+      fromUser: process.env.GMAIL_USER || 'GMAIL_USER vacío',
+      passwordConfigured: Boolean(process.env.GMAIL_PASS),
+    })
+    try {
+      const result = await createGmailTransport(attempt.port, attempt.secure).sendMail({
+        from: mailFrom(),
+        to,
+        subject,
+        text,
+      })
+      await logInfo('Gmail aceptó el mail', {
+        to,
+        subject,
+        messageId: result.messageId,
+        response: result.response,
+        port: attempt.port,
+      })
+      return result
+    } catch (error) {
+      lastError = error
+      await logError('Gmail no aceptó la conexión', error, { to, subject, port: attempt.port })
+    }
+  }
 
-  await logInfo('Gmail aceptó el mail', {
-    to,
-    subject,
-    messageId: result.messageId,
-    response: result.response,
-  })
-  return result
+  throw lastError
 }
 
 export async function sendMail({ to, subject, text }) {
@@ -106,9 +122,12 @@ export async function sendMail({ to, subject, text }) {
     try {
       return await sendWithGmail({ to, subject, text })
     } catch (error) {
-      await logError('Gmail no aceptó la conexión', error, { to, subject })
       if (!resend) throw error
-      await logInfo('Probando Resend porque Gmail falló', { to, subject })
+      await logInfo('Probando Resend porque Gmail falló', {
+        to,
+        subject,
+        motivo: 'Render suele bloquear SMTP (ETIMEDOUT). Resend o un dominio verificado son la vía estable.',
+      })
     }
   }
 
