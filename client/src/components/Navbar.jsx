@@ -75,6 +75,15 @@ function Navbar() {
                             </li>
                             <li>
                                 <Link
+                                    to="/tablero"
+                                    onClick={closeMenu}
+                                    className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300 lg:mt-0 mt-2"
+                                >
+                                    Tablero
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
                                     to="/"
                                     onClick={() => {
                                         logout();
@@ -161,6 +170,15 @@ function Navbar() {
                                     className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300"
                                 >
                                     Vender
+                                </Link>
+                            </li>
+                            <li>
+                                <Link
+                                    to="/tablero"
+                                    onClick={closeMenu}
+                                    className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-blue-300 transition-colors duration-300"
+                                >
+                                    Tablero
                                 </Link>
                             </li>
                             <li>

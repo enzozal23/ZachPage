@@ -1,6 +1,7 @@
 
 
-import { Routes, Route, HashRouter } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { Routes, Route, HashRouter, useLocation } from 'react-router-dom'
 import RegisterPage from './pages/RegisterPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
@@ -19,14 +20,16 @@ import SalesList from './pages/SalesList.jsx'
 import HomePage from './pages/HomePage.jsx'
 import SaleWebList from './pages/SaleWebList.jsx'
 
-function App() {
+const TableroKanban = lazy(() => import('./tablero/App.jsx'))
+
+function AppShell() {
+  const { pathname } = useLocation()
+  const isTablero = pathname === '/tablero'
+
   return (
-    <AuthProvider>
-      <TaskProvider>
-        <ProductsProvider>
-          <HashRouter>
-            <Navbar />
-            <Routes>
+    <>
+      {!isTablero && <Navbar />}
+      <Routes>
 
               <Route path="/" element={<HomePage />} />
               <Route path="/register" element={<RegisterPage />} />           {/*  RUTAS PUBLICAS  */}
@@ -43,14 +46,28 @@ function App() {
                 <Route path="/vender" element={<SellProductForm />} />
                 <Route path="/ventas" element={<SalesList />} />
                 <Route path="/ventasWeb" element={<SaleWebList />} />
-
-
               </Route>
+              <Route
+                path="/tablero"
+                element={
+                  <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#f4f5f7] text-[#42526e]">Cargando tablero…</div>}>
+                    <TableroKanban />
+                  </Suspense>
+                }
+              />
               <Route path='*' element={<NotFound />} />
             </Routes>
+    </>
+  )
+}
 
-
-
+function App() {
+  return (
+    <AuthProvider>
+      <TaskProvider>
+        <ProductsProvider>
+          <HashRouter>
+            <AppShell />
           </HashRouter>
         </ProductsProvider>
       </TaskProvider>
