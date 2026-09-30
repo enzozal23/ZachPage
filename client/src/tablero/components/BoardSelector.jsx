@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Button } from './ui/Button.jsx'
+import { controlClass } from './ui/styles.js'
 
 function BoardSelector({ boards, selectedBoardId, onSelect, onCreate }) {
   const [creating, setCreating] = useState(false)
@@ -14,9 +16,9 @@ function BoardSelector({ boards, selectedBoardId, onSelect, onCreate }) {
   }
 
   return (
-    <div className="board-selector">
+    <div className="flex flex-wrap items-center gap-2">
       <select
-        className="board-selector-select"
+        className={`${controlClass} w-auto`}
         value={selectedBoardId ?? ''}
         onChange={(e) => onSelect(e.target.value)}
         aria-label="Tablero seleccionado"
@@ -29,30 +31,30 @@ function BoardSelector({ boards, selectedBoardId, onSelect, onCreate }) {
       </select>
 
       {creating ? (
-        <form className="board-selector-form" onSubmit={handleCreate}>
+        <form className="flex flex-wrap gap-2" onSubmit={handleCreate}>
           <input
+            className={`${controlClass} w-48`}
             autoFocus
             type="text"
             placeholder="Nombre del tablero"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <button type="submit">Crear</button>
-          <button
-            type="button"
-            className="btn-secondary"
+          <Button type="submit">Crear</Button>
+          <Button
+            variant="secondary"
             onClick={() => {
               setCreating(false)
               setName('')
             }}
           >
             Cancelar
-          </button>
+          </Button>
         </form>
       ) : (
-        <button type="button" className="btn-secondary" onClick={() => setCreating(true)}>
+        <Button variant="secondary" onClick={() => setCreating(true)}>
           + Nuevo tablero
-        </button>
+        </Button>
       )}
     </div>
   )

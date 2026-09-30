@@ -4,9 +4,20 @@ import { getKanbanRequest, saveKanbanRequest } from '../../api/kanban.js'
 import { DEFAULT_COLUMN_ID, DEFAULT_PRIORITY, PENDING_COLUMN_ID, needsAssignment } from '../constants/columns.js'
 import { assigneeFields, ticketAssignees } from '../lib/assignees.js'
 import { ticketTasks } from '../lib/tasks.js'
-import { packKanban, unpackKanban } from '../lib/persist.js'
+import { packKanban, resolveExpediente, unpackKanban } from '../lib/persist.js'
+import { normalizeFilters } from '../lib/boardFilters.js'
 
 const SELECTED_KEY = 'tablero-kanban:selectedBoardId'
+
+function mergeLocalTicketFields(localTickets, remoteTickets) {
+  const byId = new Map((localTickets || []).map((ticket) => [ticket.id, ticket]))
+  return (remoteTickets || []).map((ticket) => {
+    const local = byId.get(ticket.id)
+    const expediente = resolveExpediente(ticket) || resolveExpediente(local || {})
+    if (!expediente || ticket.expediente === expediente) return ticket
+    return { ...ticket, expediente }
+  })
+}
 
 function readSelected() {
   try {
@@ -167,6 +178,7 @@ export function useKanbanStore() {
             const saved = await saveKanbanRequest(packKanban(remote))
             if (cancelled) return
             const next = unpackKanban(saved.data)
+            next.tickets = mergeLocalTicketFields(remote.tickets, next.tickets)
             if (next.tickets.length < sent) {
               setSaveError('El servidor no confirmó todas las tarjetas.')
               return
@@ -213,6 +225,7 @@ export function useKanbanStore() {
         .then((res) => {
           if (revision.current !== revisionAtSave) return
           const next = unpackKanban(res.data)
+          next.tickets = mergeLocalTicketFields(snapshot.tickets, next.tickets)
           if ((next.tickets || []).length < (snapshot.tickets || []).length) {
             setSaveError('El servidor no confirmó todas las tarjetas.')
             return
@@ -270,6 +283,18 @@ export function useKanbanStore() {
     setState((prev) => ({ ...prev, selectedBoardId: boardId }))
   }, [])
 
+  const saveBoardFilters = useCallback((boardId, filters) => {
+    if (!boardId) return
+    update((prev) => ({
+      ...prev,
+      boards: (prev.boards || []).map((board) => (
+        board.id === boardId
+          ? { ...board, filters: normalizeFilters(filters) }
+          : board
+      )),
+    }))
+  }, [update])
+
   const createTicket = useCallback((data) => {
     update((prev) => {
       const ticket = {
@@ -283,6 +308,7 @@ export function useKanbanStore() {
         priority: data.priority || DEFAULT_PRIORITY,
         labels: data.labels || [],
         dueDate: data.dueDate || '',
+        expediente: String(data.expediente || '').trim(),
         task: '',
         tasks: Array.isArray(data.tasks) ? data.tasks : [],
         createdAt: new Date().toISOString(),
@@ -347,6 +373,7 @@ export function useKanbanStore() {
       priority: ticket.priority || DEFAULT_PRIORITY,
       labels: ticket.labels || [],
       dueDate: ticket.dueDate || '',
+      expediente: String(ticket.expediente || '').trim(),
       task: '',
       tasks: [],
       createdAt: now,
@@ -431,6 +458,7 @@ export function useKanbanStore() {
       priority: ticket.priority || DEFAULT_PRIORITY,
       labels: ticket.labels || [],
       dueDate: ticket.dueDate || '',
+      expediente: String(ticket.expediente || '').trim(),
       task: '',
       tasks: [],
       createdAt: now,
@@ -462,6 +490,7 @@ export function useKanbanStore() {
     setState(next)
     return saveKanbanRequest(packKanban(next)).then((res) => {
       const unpacked = unpackKanban(res.data)
+      unpacked.tickets = mergeLocalTicketFields(next.tickets, unpacked.tickets)
       if (revision.current !== revisionAtSave) return { entry, created }
       revision.current += 1
       dirty.current = false
@@ -494,6 +523,7 @@ export function useKanbanStore() {
     selectedBoardId,
     createBoard,
     selectBoard,
+    saveBoardFilters,
     createTicket,
     updateTicket,
     moveTicket,

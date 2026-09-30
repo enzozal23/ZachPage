@@ -24,6 +24,22 @@ function preferList(serverList, extraList) {
   return undefined
 }
 
+/** Recupera N° expediente del campo, del carrier o del texto importado. */
+export function resolveExpediente(ticket, extra = null) {
+  const direct = String(ticket?.expediente || extra?.expediente || '').trim()
+  if (direct) return direct
+
+  const description = String(ticket?.description || '')
+  const fromDescription = description.match(/^Expediente:\s*(.+)$/im)
+  if (fromDescription?.[1]) return fromDescription[1].trim()
+
+  const title = String(ticket?.title || '')
+  const fromTitle = title.match(/^(.+?)\s+[—-]\s+/)
+  if (fromTitle?.[1]) return fromTitle[1].trim()
+
+  return ''
+}
+
 export function unpackTicket(ticket) {
   const extra = readCarrier(ticket?.labels)
   const tasks = preferList(ticket?.tasks, extra?.tasks)
@@ -32,6 +48,7 @@ export function unpackTicket(ticket) {
   const comments = preferList(ticket?.comments, extra?.comments)
   return {
     ...ticket,
+    expediente: resolveExpediente(ticket, extra),
     labels: visibleLabels(ticket?.labels),
     ...(tasks ? { tasks } : {}),
     ...(assignees ? { assignees } : {}),
@@ -39,7 +56,6 @@ export function unpackTicket(ticket) {
     ...(comments ? { comments } : {}),
   }
 }
-
 function normalizeImport(item) {
   if (!item) return item
   const { fileBase64, hasFile, ...rest } = item
@@ -77,16 +93,19 @@ export function unpackKanban(data) {
 
 export function packTicket(ticket, imports) {
   const tasks = ticketTasks(ticket)
+  const expediente = String(ticket.expediente || '').trim()
   const extra = {
     assignees: Array.isArray(ticket.assignees) ? ticket.assignees : [],
     followers: Array.isArray(ticket.followers) ? ticket.followers : [],
     comments: Array.isArray(ticket.comments) ? ticket.comments : [],
     tasks,
+    expediente,
     ...(imports ? { imports } : {}),
   }
   const pending = tasks.filter((task) => !task.done).map((task) => task.text).join('; ')
   return {
     ...ticket,
+    expediente,
     tasks,
     task: pending,
     labels: [

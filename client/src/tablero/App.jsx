@@ -10,7 +10,10 @@ import LexoraNav from './components/LexoraNav.jsx'
 import ImportsPage from './components/ImportsPage.jsx'
 import ActivityPage from './components/ActivityPage.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
-import './App.css'
+import UsersPage from './components/UsersPage.jsx'
+import NewsPage from './components/NewsPage.jsx'
+
+const shellClass = 'flex min-h-dvh flex-col bg-canvas font-sans text-ink'
 
 const THEME_KEY = 'lexora-theme'
 
@@ -36,6 +39,8 @@ function App() {
   const showImports = pathname === '/importaciones'
   const showActivity = pathname === '/monitoreo'
   const showSettings = pathname === '/configuraciones'
+  const showUsers = pathname === '/usuarios'
+  const showNews = pathname === '/novedades'
   const openedTicket = ticketId
     ? store.tickets.find((ticket) => ticket.id === ticketId) || null
     : null
@@ -46,6 +51,7 @@ function App() {
     : []
 
   useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark')
     try {
       localStorage.setItem(THEME_KEY, theme)
     } catch {
@@ -86,8 +92,8 @@ function App() {
 
   if (loading) {
     return (
-      <div className="tablero-root" data-theme={theme}>
-        <div className="auth-loading">Cargando…</div>
+      <div className={shellClass}>
+        <div className="flex flex-1 items-center justify-center text-muted">Cargando…</div>
       </div>
     )
   }
@@ -95,26 +101,24 @@ function App() {
   if (!isAuthenticated) {
     const serverError = Array.isArray(errors) ? errors.filter(Boolean).join(' ') : ''
     return (
-      <div className="tablero-root" data-theme={theme}>
-        <LoginPage
-          serverError={serverError}
-          onLogin={(email, password) => signin({ email, password })}
-        />
-      </div>
+      <LoginPage
+        serverError={serverError}
+        onLogin={(email, password) => signin({ email, password })}
+      />
     )
   }
 
   if (!store.ready) {
     return (
-      <div className="tablero-root" data-theme={theme}>
-        <div className="auth-loading">Cargando…</div>
+      <div className={shellClass}>
+        <div className="flex flex-1 items-center justify-center text-muted">Cargando…</div>
       </div>
     )
   }
 
   return (
-    <div className="tablero-root" data-theme={theme}>
-      <div className="app">
+    <div className={shellClass}>
+      <div className="flex min-h-dvh flex-1 flex-col">
         <LexoraNav
           pathname={pathname}
           theme={theme}
@@ -123,7 +127,11 @@ function App() {
           onLogout={logout}
         />
 
-        {store.saveError && <p className="board-save-error">{store.saveError}</p>}
+        {store.saveError && (
+          <p className="bg-chip-red px-4 py-2 text-sm text-chip-red-ink">
+            {store.saveError}
+          </p>
+        )}
 
         {importedBatch && importedTickets.length > 0 && (
           <QuickAssignPanel
@@ -145,6 +153,10 @@ function App() {
           <ActivityPage />
         ) : showSettings ? (
           <SettingsPage />
+        ) : showUsers ? (
+          <UsersPage />
+        ) : showNews ? (
+          <NewsPage />
         ) : (
           <Board
             board={currentBoard}
@@ -156,6 +168,7 @@ function App() {
               if (id === ticketId) navigate('/', { replace: true })
             }}
             onMoveTicket={store.moveTicket}
+            onSaveBoardFilters={store.saveBoardFilters}
             onResetAll={() => {
               store.resetAll()
               setCreating(null)

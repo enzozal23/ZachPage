@@ -5,8 +5,16 @@ export const loginRequest = (user) => axios.post('api/login', user)
 export const logoutRequest = () => axios.post('api/logout')
 export const verifyTokenRequest = () => axios.get('api/verify')
 export const getUsersRequest = (q = '') => axios.get('api/users', { params: q ? { q } : {} })
+export const listAllUsersRequest = () => axios.get('api/users/all')
+export const createUserRequest = (user) => axios.post('api/users', user)
+export const updateUserRequest = (id, user) => axios.put(`api/users/${id}`, user)
+export const deleteUserRequest = (id) => axios.delete(`api/users/${id}`)
 
 let userSearchCache = null
+
+export function clearUserSearchCache() {
+    userSearchCache = null
+}
 
 function matchesUser(user, query) {
     return `${user.username || ''} ${user.email || ''}`.toLowerCase().includes(query)

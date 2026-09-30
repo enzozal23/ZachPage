@@ -122,6 +122,7 @@ export async function parseWordDocx(file) {
     tickets.push({
       title: buildTitle(expediente, caratula),
       description: buildDescription(expediente, juzgado, caratula, novedad),
+      expediente,
       status: DEFAULT_COLUMN_ID,
       assignee: '',
       priority: DEFAULT_PRIORITY,

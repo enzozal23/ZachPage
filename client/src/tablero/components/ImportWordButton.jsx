@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { parseWordDocx } from '../lib/wordImport.js'
+import { Button } from './ui/Button.jsx'
 
 function ImportWordButton({ onImported }) {
   const inputRef = useRef(null)
@@ -29,13 +30,13 @@ function ImportWordButton({ onImported }) {
   }
 
   return (
-    <div className="import-word">
-      <button type="button" disabled={busy} onClick={() => inputRef.current?.click()}>
+    <div className="flex flex-col items-end gap-2">
+      <Button disabled={busy} onClick={() => inputRef.current?.click()}>
         {busy ? 'Importando…' : 'Importar Word'}
-      </button>
+      </Button>
       <input ref={inputRef} type="file" accept=".docx" hidden onChange={handleFileChange} />
       {error && (
-        <p className="import-error" role="alert">
+        <p className="max-w-xs rounded-lg bg-chip-red px-3 py-2 text-right text-sm text-chip-red-ink" role="alert">
           {error}
         </p>
       )}

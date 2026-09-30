@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { COLUMNS, PRIORITIES, DEFAULT_PRIORITY, ticketColumnId } from '../constants/columns.js'
 import AssigneeSelect from './AssigneeSelect.jsx'
+import { Button } from './ui/Button.jsx'
+import { controlClass } from './ui/styles.js'
 import { assigneeFields, ticketAssignees, ticketFollowers } from '../lib/assignees.js'
-import { visibleLabels } from '../lib/persist.js'
+import { resolveExpediente, visibleLabels } from '../lib/persist.js'
 import { ticketTasks } from '../lib/tasks.js'
 
 function buildInitialForm(ticket, initialStatus) {
@@ -16,6 +18,7 @@ function buildInitialForm(ticket, initialStatus) {
       priority: ticket.priority || DEFAULT_PRIORITY,
       labels: visibleLabels(ticket.labels).join(', '),
       dueDate: ticket.dueDate || '',
+      expediente: resolveExpediente(ticket),
     }
   }
   return {
@@ -27,6 +30,7 @@ function buildInitialForm(ticket, initialStatus) {
     priority: DEFAULT_PRIORITY,
     labels: '',
     dueDate: '',
+    expediente: '',
   }
 }
 
@@ -77,6 +81,7 @@ function TicketFormModal({
         .map((label) => label.trim())
         .filter(Boolean),
       dueDate: form.dueDate,
+      expediente: form.expediente.trim(),
       ...(ticket ? {} : { tasks: draftTasks }),
     })
   }
@@ -102,48 +107,55 @@ function TicketFormModal({
     setComment('')
   }
 
+  const sideLabel = 'flex flex-col gap-1.5 text-sm font-medium text-muted'
+  const priorityOn = {
+    Alta: 'bg-red-600 text-white',
+    Media: 'bg-amber-500 text-white',
+    Baja: 'bg-emerald-600 text-white',
+  }
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <form className="modal ticket-sheet" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-        <header className="sheet-top">
-          <div className="sheet-heading">
-            <p className="sheet-kicker">{mode === 'edit' ? 'Ficha' : 'Nueva ficha'}</p>
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-950/60" onClick={onClose}>
+      <form className="flex h-[90dvh] w-[90vw] flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+        <header className="flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-line px-6 py-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold tracking-wide text-chip-indigo-ink uppercase">{mode === 'edit' ? 'Ficha' : 'Nueva ficha'}</p>
             <input
-              className="sheet-title"
+              className="mt-1 w-full border-0 bg-transparent text-2xl font-semibold text-ink outline-none placeholder:text-muted"
               autoFocus
               type="text"
               value={form.title}
               placeholder="Carátula o título"
               onChange={(e) => handleChange('title', e.target.value)}
             />
-            {error && <p className="form-error">{error}</p>}
+            {error && <p className="text-sm text-chip-red-ink">{error}</p>}
           </div>
-          <div className="sheet-top-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cerrar</button>
-            <button type="submit">Guardar</button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+            <Button type="submit">Guardar</Button>
           </div>
         </header>
 
-        <div className="sheet-body">
-          <section className="sheet-main">
-            <div className="sheet-pills" role="group" aria-label="Estado">
+        <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto p-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,0.85fr)] lg:grid-rows-1">
+          <section className="flex h-full min-h-0 flex-col gap-4">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Estado">
               {COLUMNS.map((column) => (
                 <button
                   key={column.id}
                   type="button"
-                  className={form.status === column.id ? 'sheet-pill is-on' : 'sheet-pill'}
+                  className={`rounded-full px-3 py-1 text-sm font-medium ${form.status === column.id ? 'bg-indigo-600 text-white' : 'bg-sunken text-muted'}`}
                   onClick={() => handleChange('status', column.id)}
                 >
                   {column.label}
                 </button>
               ))}
             </div>
-            <div className="sheet-pills" role="group" aria-label="Prioridad">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Prioridad">
               {PRIORITIES.map((priority) => (
                 <button
                   key={priority}
                   type="button"
-                  className={`sheet-pill tone-${priority} ${form.priority === priority ? 'is-on' : ''}`}
+                  className={`rounded-full px-3 py-1 text-sm font-medium ${form.priority === priority ? priorityOn[priority] : 'bg-sunken text-muted'}`}
                   onClick={() => handleChange('priority', priority)}
                 >
                   {priority}
@@ -151,18 +163,20 @@ function TicketFormModal({
               ))}
             </div>
 
-            <label className="sheet-document">
+            <label className={`${sideLabel} min-h-40 flex-1`}>
               <span>Descripción</span>
               <textarea
+                className={`${controlClass} min-h-0 flex-1 resize-y`}
                 value={form.description}
                 placeholder="Hechos, juzgado, vencimientos, intimaciones…"
                 onChange={(e) => handleChange('description', e.target.value)}
               />
             </label>
 
-            <label>
+            <label className={sideLabel}>
               <span>Etiquetas</span>
               <input
+                className={controlClass}
                 type="text"
                 value={form.labels}
                 placeholder="Separadas por coma"
@@ -171,17 +185,28 @@ function TicketFormModal({
             </label>
           </section>
 
-          <aside className="sheet-side">
-            <label>
+          <aside className="flex h-full min-h-0 flex-col gap-4">
+            <label className={sideLabel}>
+              <span>N° expediente</span>
+              <input
+                className={controlClass}
+                type="text"
+                placeholder="Número de expediente"
+                value={form.expediente}
+                onChange={(e) => handleChange('expediente', e.target.value)}
+              />
+            </label>
+            <label className={sideLabel}>
               <span>Fecha límite</span>
               <input
+                className={controlClass}
                 type="text"
                 placeholder="dd/mm/aaaa"
                 value={form.dueDate}
                 onChange={(e) => handleChange('dueDate', e.target.value)}
               />
             </label>
-            <label>
+            <label className={sideLabel}>
               <span>Responsables</span>
               <AssigneeSelect
                 value={form.assignees}
@@ -189,7 +214,7 @@ function TicketFormModal({
                 onChange={(assignees) => handleChange('assignees', assignees)}
               />
             </label>
-            <label>
+            <label className={sideLabel}>
               <span>Seguidores</span>
               <AssigneeSelect
                 value={form.followers}
@@ -198,26 +223,28 @@ function TicketFormModal({
               />
             </label>
 
-            <details className="ticket-tasks">
-              <summary>
+            <details className="rounded-xl border border-line p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-muted">
                 {tasks.length === 0 ? 'Tareas' : `${tasksDone} de ${tasks.length}`}
               </summary>
-              <ul>
+              <ul className="mt-3 flex flex-col gap-2">
                 {tasks.map((task) => (
                   <li key={task.id}>
-                    <label>
+                    <label className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
+                        className="mt-1"
                         checked={task.done}
                         onChange={() => toggleTask(task.id)}
                       />
-                      <span className={task.done ? 'is-done' : ''}>{task.text}</span>
+                      <span className={task.done ? 'text-muted line-through' : 'text-muted'}>{task.text}</span>
                     </label>
                   </li>
                 ))}
               </ul>
-              <div className="ticket-tasks-add">
+              <div className="mt-3 flex gap-2">
                 <input
+                  className={controlClass}
                   type="text"
                   placeholder="Nueva tarea"
                   value={taskDraft}
@@ -229,43 +256,44 @@ function TicketFormModal({
                     setTaskDraft('')
                   }}
                 />
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => {
                     addTask(taskDraft)
                     setTaskDraft('')
                   }}
                 >
                   Agregar
-                </button>
+                </Button>
               </div>
             </details>
 
             {mode === 'edit' && (
-              <div className="sheet-history">
-                <h3>Historial</h3>
-                <ul>
-                  {comments.length === 0 && <li className="sheet-history-empty">Todavía no hay nada en el historial.</li>}
+              <div className="flex min-h-0 flex-1 flex-col gap-3">
+                <h3 className="text-sm font-semibold text-ink">Historial</h3>
+                <ul className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+                  {comments.length === 0 && <li className="text-sm text-muted">Todavía no hay nada en el historial.</li>}
                   {comments.map((item) => (
-                    <li key={item.id}>
-                      <div className="sheet-history-meta">
-                        <strong>{item.author || 'Usuario'}</strong>
+                    <li key={item.id} className="rounded-lg bg-sunken p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2 text-xs text-muted">
+                        <strong className="text-muted">{item.author || 'Usuario'}</strong>
                         <time>{formatWhen(item.createdAt)}</time>
                       </div>
-                      <p>{item.text}</p>
+                      <p className="mt-1 text-muted">{item.text}</p>
                     </li>
                   ))}
                 </ul>
-                <div className="sheet-history-compose">
+                <div className="flex flex-col gap-2">
                   <textarea
+                    className={`${controlClass} resize-y`}
                     rows={3}
                     placeholder="Escribí en el historial"
                     value={comment}
                     onChange={(event) => setComment(event.target.value)}
                   />
-                  <button type="button" onClick={handleComment} disabled={!comment.trim()}>
+                  <Button onClick={handleComment} disabled={!comment.trim()}>
                     Agregar
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

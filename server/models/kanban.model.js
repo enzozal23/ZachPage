@@ -4,6 +4,7 @@ const boardSchema = new Schema({
   id: String,
   name: String,
   createdAt: String,
+  filters: { type: Schema.Types.Mixed, default: undefined },
 }, { _id: false })
 
 const taskItemSchema = new Schema({
@@ -31,6 +32,7 @@ const ticketSchema = new Schema({
   priority: String,
   labels: [String],
   dueDate: String,
+  expediente: String,
   task: String,
   tasks: [taskItemSchema],
   createdAt: String,

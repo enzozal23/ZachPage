@@ -87,6 +87,15 @@ function publicTicket(ticket) {
     publicComments(ticket.comments).length ? ticket.comments : extra?.comments,
   )
   const pending = tasks.filter((task) => !task.done).map((task) => task.text).join('; ')
+  let expediente = String(ticket.expediente || extra?.expediente || '').trim()
+  if (!expediente) {
+    const fromDescription = String(ticket.description || '').match(/^Expediente:\s*(.+)$/im)
+    if (fromDescription?.[1]) expediente = fromDescription[1].trim()
+  }
+  if (!expediente) {
+    const fromTitle = String(ticket.title || '').match(/^(.+?)\s+[—-]\s+/)
+    if (fromTitle?.[1]) expediente = fromTitle[1].trim()
+  }
   return {
     id: ticket.id,
     boardId: ticket.boardId,
@@ -99,6 +108,7 @@ function publicTicket(ticket) {
     priority: ticket.priority || 'Media',
     labels,
     dueDate: ticket.dueDate || '',
+    expediente,
     task: pending,
     tasks,
     createdAt: ticket.createdAt || '',

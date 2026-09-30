@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import { parseWordDocx } from '../lib/wordImport.js'
+import { Button } from './ui/Button.jsx'
+import { panelClass } from './ui/styles.js'
 
 function formatWhen(value) {
   if (!value) return ''
@@ -47,34 +49,34 @@ function ImportsPage({
   }
 
   return (
-    <section className="imports-page">
-      <div className="imports-hero">
+    <section className="flex flex-1 flex-col gap-4 px-6 py-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2>Importaciones</h2>
-          <p>
+          <h2 className="text-xl font-semibold text-ink">Importaciones</h2>
+          <p className="mt-1 text-sm text-muted">
             Los tickets del Word entran al tablero <strong>{board?.name || 'seleccionado'}</strong>.
           </p>
         </div>
-        <div className="import-word">
-          <button type="button" disabled={busy || !board} onClick={() => inputRef.current?.click()}>
+        <div>
+          <Button disabled={busy || !board} onClick={() => inputRef.current?.click()}>
             {busy ? 'Importando…' : 'Importar Word'}
-          </button>
+          </Button>
           <input ref={inputRef} type="file" accept=".docx" hidden onChange={handleFileChange} />
         </div>
       </div>
 
-      {error && <p className="import-error" role="alert">{error}</p>}
-      {notice && <p className="import-notice" role="status">{notice}</p>}
+      {error && <p className="rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{error}</p>}
+      {notice && <p className="rounded-lg bg-chip-amber px-3 py-2 text-sm text-chip-amber-ink" role="status">{notice}</p>}
 
-      <div className="imports-list">
-        {imports.length === 0 && <p className="imports-empty">Todavía no hay importaciones.</p>}
+      <div className="flex flex-col gap-3">
+        {imports.length === 0 && <p className="text-sm text-muted">Todavía no hay importaciones.</p>}
         {imports.map((item) => (
-          <article key={item.id} className="import-record">
+          <article key={item.id} className={`${panelClass} flex flex-wrap items-center justify-between gap-3 p-4`}>
             <div>
-              <h3>{item.fileName}</h3>
-              <p>{item.boardName || 'Sin tablero'} · {item.author || 'Sin autor'}</p>
+              <h3 className="font-semibold text-ink">{item.fileName}</h3>
+              <p className="text-sm text-muted">{item.boardName || 'Sin tablero'} · {item.author || 'Sin autor'}</p>
             </div>
-            <div className="import-record-stats">
+            <div className="flex flex-wrap gap-3 text-sm text-muted">
               <span>{item.imported} tickets</span>
               <span>{item.skippedNoTitle || 0} sin título</span>
               <time>{formatWhen(item.createdAt)}</time>

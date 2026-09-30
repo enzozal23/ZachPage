@@ -25,7 +25,7 @@ const TableroKanban = lazy(() => import('./tablero/App.jsx'))
 
 function AppShell() {
   const { pathname } = useLocation()
-  const isTablero = pathname === '/' || pathname === '/tablero' || pathname === '/importaciones' || pathname === '/monitoreo' || pathname === '/configuraciones' || pathname.startsWith('/t/')
+  const isTablero = pathname === '/' || pathname === '/tablero' || pathname === '/importaciones' || pathname === '/monitoreo' || pathname === '/configuraciones' || pathname === '/usuarios' || pathname === '/novedades' || pathname.startsWith('/t/')
 
   return (
     <>
@@ -44,6 +44,8 @@ function AppShell() {
                 <Route path="/importaciones" />
                 <Route path="/monitoreo" />
                 <Route path="/configuraciones" />
+                <Route path="/usuarios" />
+                <Route path="/novedades" />
                 <Route path="/t/:ticketId" />
               </Route>
               {/* Ecommerce

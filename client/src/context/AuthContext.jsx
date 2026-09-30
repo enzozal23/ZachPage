@@ -62,6 +62,11 @@ export const AuthProvider = ({ children }) => {
             setErrors(readError(error))
         }
     }
+    const refreshProfile = async () => {
+        const res = await verifyTokenRequest()
+        if (res.data) setUser(res.data)
+    }
+
     const logout = async () => {
         try {
             await logoutRequest()
@@ -106,7 +111,7 @@ export const AuthProvider = ({ children }) => {
     }, [])
 
     return (//context para poder compartir todos los datos en las distintas paginas de la website
-        <AuthContext.Provider value={{ signup, signin, logout, loading, user, isAuthenticated, errors }}>
+        <AuthContext.Provider value={{ signup, signin, logout, refreshProfile, loading, user, isAuthenticated, errors }}>
             {children}
         </AuthContext.Provider>
     )

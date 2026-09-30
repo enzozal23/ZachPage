@@ -2,8 +2,253 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    color-scheme: light;
+    --canvas: 241 245 249;
+    --surface: 255 255 255;
+    --sunken: 226 232 240;
+    --ink: 15 23 42;
+    --muted: 71 85 105;
+    --line: 226 232 240;
+    --field: 255 255 255;
+    --chip-red: 254 242 242;
+    --chip-red-ink: 185 28 28;
+    --chip-amber: 254 243 199;
+    --chip-amber-ink: 120 53 15;
+    --chip-emerald: 236 253 245;
+    --chip-emerald-ink: 6 95 70;
+    --chip-indigo: 238 242 255;
+    --chip-indigo-ink: 55 48 163;
+    --due-overdue: 255 236 236;
+    --due-near: 255 244 214;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --canvas: 2 6 23;
+    --sunken: 15 23 42;
+    --surface: 30 41 59;
+    --field: 15 23 42;
+    --ink: 241 245 249;
+    --muted: 203 213 225;
+    --line: 71 85 105;
+    --chip-red: 69 10 10;
+    --chip-red-ink: 254 202 202;
+    --chip-amber: 69 26 3;
+    --chip-amber-ink: 253 230 138;
+    --chip-emerald: 6 46 36;
+    --chip-emerald-ink: 167 243 208;
+    --chip-indigo: 30 27 75;
+    --chip-indigo-ink: 199 210 254;
+    --due-overdue: 48 36 46;
+    --due-near: 52 46 32;
+  }
+}
+
 body {
-  background-color: #160f24;
-  color: white;
+  background-color: rgb(var(--canvas));
+  color: rgb(var(--ink));
   font-family: "Fraunces", Georgia, serif;
+}
+
+/* Fondos y texto del tema. Van fuera de @layer para que apliquen
+   aunque el servidor de desarrollo no regenere las utilidades nuevas. */
+.bg-canvas { background-color: rgb(var(--canvas)); }
+.bg-surface { background-color: rgb(var(--surface)); }
+.bg-due-overdue { background-color: rgb(var(--due-overdue)); }
+.bg-due-near { background-color: rgb(var(--due-near)); }
+.bg-sunken { background-color: rgb(var(--sunken)); }
+.bg-field { background-color: rgb(var(--field)); }
+.bg-chip-red { background-color: rgb(var(--chip-red)); }
+.bg-chip-amber { background-color: rgb(var(--chip-amber)); }
+.bg-chip-emerald { background-color: rgb(var(--chip-emerald)); }
+.bg-chip-indigo { background-color: rgb(var(--chip-indigo)); }
+.text-ink { color: rgb(var(--ink)); }
+.text-muted { color: rgb(var(--muted)); }
+.text-chip-red-ink { color: rgb(var(--chip-red-ink)); }
+.text-chip-amber-ink { color: rgb(var(--chip-amber-ink)); }
+.text-chip-emerald-ink { color: rgb(var(--chip-emerald-ink)); }
+.text-chip-indigo-ink { color: rgb(var(--chip-indigo-ink)); }
+.border-line { border-color: rgb(var(--line)); }
+.ring-line { --tw-ring-color: rgb(var(--line)); }
+.hover\:bg-sunken:hover { background-color: rgb(var(--sunken)); }
+.hover\:bg-chip-red:hover { background-color: rgb(var(--chip-red)); }
+.hover\:text-chip-red-ink:hover { color: rgb(var(--chip-red-ink)); }
+.placeholder\:text-muted::placeholder { color: rgb(var(--muted)); opacity: 1; }
+
+.login-page {
+  color-scheme: dark;
+}
+
+.login-reel {
+  --size: 112px;
+  --radius: 28px;
+  --duration: 12s;
+
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  isolation: isolate;
+}
+
+.login-reel::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  z-index: -1;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, #7c3aed, #ec4899, #f59e0b, #22d3ee, #7c3aed);
+  filter: blur(22px);
+  opacity: 0.55;
+  animation: reel-halo 8s linear infinite, reel-breathe 4s ease-in-out infinite;
+}
+
+.login-reel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: var(--radius);
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 18px 40px -12px rgba(0, 0, 0, 0.7);
+}
+
+.login-reel img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius);
+  opacity: 0;
+  will-change: opacity, transform, filter;
+  animation: login-reel var(--duration) cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.login-reel img:nth-child(2) { animation-delay: calc(var(--duration) / 3); }
+.login-reel img:nth-child(3) { animation-delay: calc(var(--duration) / 3 * 2); }
+
+@keyframes login-reel {
+  0%   { opacity: 0; transform: scale(0.88) translateY(6px) rotate(-2deg); filter: blur(10px) saturate(1.4); }
+  7%   { opacity: 1; transform: scale(1) translateY(0) rotate(0); filter: blur(0) saturate(1); }
+  30%  { opacity: 1; transform: scale(1.04); filter: blur(0); }
+  39%  { opacity: 0; transform: scale(1.12) rotate(1.5deg); filter: blur(8px) brightness(1.3); }
+  100% { opacity: 0; transform: scale(1.12); }
+}
+
+@keyframes reel-halo { to { transform: rotate(360deg); } }
+
+@keyframes reel-breathe {
+  0%, 100% { opacity: 0.45; scale: 0.95; }
+  50%      { opacity: 0.7;  scale: 1.05; }
+}
+
+.login-reel:hover img,
+.login-reel:hover::before {
+  animation-play-state: paused;
+}
+
+.login-aurora {
+  position: absolute;
+  inset: 0;
+  z-index: -20;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.login-aurora span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  animation: aurora-drift 18s ease-in-out infinite alternate;
+}
+
+.login-aurora span:nth-child(1) {
+  width: 560px; height: 560px;
+  left: -140px; top: -180px;
+  background: #6d28d9;
+  opacity: 0.55;
+}
+
+.login-aurora span:nth-child(2) {
+  width: 440px; height: 440px;
+  right: -140px; top: 12%;
+  background: #c026d3;
+  opacity: 0.32;
+  animation-duration: 22s;
+  animation-delay: -6s;
+}
+
+.login-aurora span:nth-child(3) {
+  width: 600px; height: 600px;
+  left: 28%; bottom: -300px;
+  background: #2563eb;
+  opacity: 0.28;
+  animation-duration: 26s;
+  animation-delay: -12s;
+}
+
+@keyframes aurora-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(60px, 40px) scale(1.1); }
+  100% { transform: translate(-40px, 70px) scale(0.95); }
+}
+
+.login-card {
+  animation: card-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+}
+
+.login-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.7s ease;
+}
+
+.login-btn:hover:not(:disabled)::after {
+  transform: translateX(120%);
+}
+
+.login-shake {
+  animation: login-shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes login-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-reel::before,
+  .login-aurora span,
+  .login-card,
+  .login-shake {
+    animation: none;
+  }
+
+  .login-btn::after {
+    display: none;
+  }
+
+  .login-reel img {
+    animation: none;
+    opacity: 0;
+  }
+
+  .login-reel img:first-child {
+    opacity: 1;
+  }
 }

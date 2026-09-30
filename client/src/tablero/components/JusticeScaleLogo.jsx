@@ -187,7 +187,7 @@ function JusticeScaleLogo({ size = 120 }) {
     return () => cancelAnimationFrame(rafId)
   }, [size])
 
-  return <canvas ref={canvasRef} className="justice-scale-logo" aria-hidden="true" />
+  return <canvas ref={canvasRef} className="block" aria-hidden="true" />
 }
 
 export default JusticeScaleLogo

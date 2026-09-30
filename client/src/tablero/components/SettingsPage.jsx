@@ -1,5 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { getSettingsRequest, saveSettingsRequest } from '../../api/settings.js'
+import { Button } from './ui/Button.jsx'
+import { controlClass } from './ui/styles.js'
 import {
   DEFAULT_DAYS_BEFORE,
   REMINDER_PRIORITIES,
@@ -70,21 +72,21 @@ function RuleModal({ onClose, onAdd, existingKeys }) {
 
   if (!statuses.length) {
     return (
-      <div className="modal-overlay" role="presentation" onClick={onClose}>
+      <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-950/60 p-4" role="presentation" onClick={onClose}>
         <div
-          className="modal settings-rule-modal"
+          className="w-full max-w-lg rounded-2xl bg-surface p-6 shadow-2xl"
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
           onClick={(event) => event.stopPropagation()}
         >
-          <header className="settings-rule-modal-header">
-            <h3 id={titleId}>Agregar configuración</h3>
-            <button type="button" className="btn-secondary" onClick={onClose}>
+          <header className="mb-4 flex items-center justify-between gap-3">
+            <h3 id={titleId} className="text-lg font-semibold text-ink">Agregar configuración</h3>
+            <Button variant="secondary" onClick={onClose}>
               Cerrar
-            </button>
+            </Button>
           </header>
-          <p className="settings-hint">
+          <p className="text-sm text-muted">
             Ya hay una configuración para todas las combinaciones de estado y prioridad.
           </p>
         </div>
@@ -93,27 +95,27 @@ function RuleModal({ onClose, onAdd, existingKeys }) {
   }
 
   return (
-    <div className="modal-overlay" role="presentation" onClick={onClose}>
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-950/60 p-4" role="presentation" onClick={onClose}>
       <div
-        className="modal settings-rule-modal"
+        className="w-full max-w-lg rounded-2xl bg-surface p-6 shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="settings-rule-modal-header">
-          <h3 id={titleId}>Agregar configuración</h3>
-          <button type="button" className="btn-secondary" onClick={onClose}>
+        <header className="mb-4 flex items-center justify-between gap-3">
+          <h3 id={titleId} className="text-lg font-semibold text-ink">Agregar configuración</h3>
+          <Button variant="secondary" onClick={onClose}>
             Cerrar
-          </button>
+          </Button>
         </header>
 
-        <form className="settings-rule-form" onSubmit={handleSubmit}>
-          <label>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
             <span>Estado de tarjeta</span>
-            <div className="settings-select-with-swatch">
+            <div className="flex items-center gap-2">
               <span
-                className="settings-status-swatch"
+                className="inline-flex h-6 w-6 shrink-0 rounded-full border"
                 style={{
                   background: selectedStatus?.bg,
                   color: selectedStatus?.color,
@@ -124,7 +126,7 @@ function RuleModal({ onClose, onAdd, existingKeys }) {
               <select
                 value={status}
                 onChange={(event) => handleStatusChange(event.target.value)}
-                className={`settings-status-select is-${status}`}
+                className={controlClass}
               >
                 {statuses.map((entry) => (
                   <option key={entry.id} value={entry.id}>
@@ -135,11 +137,11 @@ function RuleModal({ onClose, onAdd, existingKeys }) {
             </div>
           </label>
 
-          <label>
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
             <span>Prioridad</span>
-            <div className="settings-select-with-swatch">
+            <div className="flex items-center gap-2">
               <span
-                className="settings-status-swatch"
+                className="inline-flex h-6 w-6 shrink-0 rounded-full border"
                 style={{
                   background: selectedPriority?.bg,
                   color: selectedPriority?.color,
@@ -153,7 +155,7 @@ function RuleModal({ onClose, onAdd, existingKeys }) {
                   setPriority(event.target.value)
                   setFormError(null)
                 }}
-                className={`settings-priority-select is-${String(priority).toLowerCase()}`}
+                className={controlClass}
               >
                 {priorities.map((entry) => (
                   <option key={entry.id} value={entry.id}>
@@ -164,9 +166,10 @@ function RuleModal({ onClose, onAdd, existingKeys }) {
             </div>
           </label>
 
-          <label>
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
             <span>Días antes de la notificación</span>
             <input
+              className={controlClass}
               type="number"
               min="0"
               max="365"
@@ -175,15 +178,15 @@ function RuleModal({ onClose, onAdd, existingKeys }) {
             />
           </label>
 
-          {formError && <p className="import-error" role="alert">{formError}</p>}
+          {formError && <p className="rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{formError}</p>}
 
-          <div className="settings-rule-form-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={onClose}>
               Cancelar
-            </button>
-            <button type="submit" disabled={!canSubmit}>
+            </Button>
+            <Button type="submit" disabled={!canSubmit}>
               Agregar
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -266,66 +269,65 @@ function SettingsPage() {
   }
 
   return (
-    <section className="settings-page">
-      <div className="settings-hero">
-        <div>
-          <h2>Configuraciones</h2>
-          <p>Parámetros generales del tablero Lexora.</p>
-        </div>
+    <section className="flex flex-1 flex-col gap-4 px-6 py-5">
+      <div>
+        <h2 className="text-xl font-semibold text-ink">Configuraciones</h2>
+        <p className="mt-1 text-sm text-muted">Parámetros generales del tablero Lexora.</p>
       </div>
 
-      {error && <p className="import-error" role="alert">{error}</p>}
-      {notice && <p className="import-notice" role="status">{notice}</p>}
-      {loading && <p className="settings-empty">Cargando…</p>}
+      {error && <p className="rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{error}</p>}
+      {notice && <p className="rounded-lg bg-chip-emerald px-3 py-2 text-sm text-chip-emerald-ink" role="status">{notice}</p>}
+      {loading && <p className="text-sm text-muted">Cargando…</p>}
 
       {!loading && (
-        <div className="settings-accordions">
+        <div className="flex flex-col gap-3">
           {SECTIONS.map((section) => {
             const isOpen = openSection === section.id
             return (
-              <div key={section.id} className={`settings-accordion${isOpen ? ' is-open' : ''}`}>
+              <div key={section.id} className="overflow-hidden rounded-2xl border border-line bg-surface">
                 <button
                   type="button"
-                  className="settings-accordion-trigger"
+                  className="flex w-full items-center justify-between px-5 py-4 text-left font-semibold text-ink"
                   aria-expanded={isOpen}
                   onClick={() => setOpenSection(isOpen ? '' : section.id)}
                 >
                   <span>{section.title}</span>
-                  <span className="settings-accordion-chevron" aria-hidden="true" />
+                  <span className={`text-muted transition ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true">▾</span>
                 </button>
 
                 {isOpen && section.id === 'due-reminders' && (
-                  <form className="settings-accordion-body" onSubmit={handleSave}>
-                    <label className={`settings-switch${mailEnabled ? ' is-on' : ''}`}>
-                      <span className="settings-switch-copy">
-                        <strong>Notificaciones por mail</strong>
-                        <span>
+                  <form className="flex flex-col gap-4 border-t border-line px-5 py-4" onSubmit={handleSave}>
+                    <label className="flex items-center justify-between gap-4">
+                      <span className="flex flex-col">
+                        <strong className="text-ink">Notificaciones por mail</strong>
+                        <span className="text-sm text-muted">
                           {mailEnabled
                             ? 'Los avisos de vencimiento se envían según las reglas.'
                             : 'Los avisos de vencimiento están desactivados.'}
                         </span>
                       </span>
-                      <input
-                        type="checkbox"
-                        role="switch"
-                        checked={mailEnabled}
-                        onChange={(event) => setMailEnabled(event.target.checked)}
-                        aria-label="Activar notificaciones por mail"
-                      />
-                      <span className="settings-switch-track" aria-hidden="true">
-                        <span className="settings-switch-thumb" />
+                      <span className="relative inline-flex shrink-0">
+                        <input
+                          type="checkbox"
+                          role="switch"
+                          className="peer sr-only"
+                          checked={mailEnabled}
+                          onChange={(event) => setMailEnabled(event.target.checked)}
+                          aria-label="Activar notificaciones por mail"
+                        />
+                        <span className="h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-indigo-600" aria-hidden="true" />
+                        <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-surface transition peer-checked:translate-x-5" aria-hidden="true" />
                       </span>
                     </label>
 
-                    <p className="settings-hint">
+                    <p className="text-sm text-muted">
                       Si no hay reglas, el aviso se envía con 1 día de anticipación (hoy o mañana
                       según el vencimiento). Con reglas, solo aplican las combinaciones de estado y
                       prioridad configuradas (0 = solo el día de vencimiento).
                     </p>
 
-                    <div className="settings-rules-toolbar">
-                      <button
-                        type="button"
+                    <div>
+                      <Button
                         onClick={() => setModalOpen(true)}
                         disabled={!hasAvailableCombos}
                         title={
@@ -335,20 +337,20 @@ function SettingsPage() {
                         }
                       >
                         Agregar configuración
-                      </button>
+                      </Button>
                     </div>
 
                     {rules.length === 0 ? (
-                      <p className="settings-empty">Todavía no hay configuraciones.</p>
+                      <p className="text-sm text-muted">Todavía no hay configuraciones.</p>
                     ) : (
-                      <div className="settings-table-wrap">
-                        <table className="settings-table">
-                          <thead>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead className="text-xs tracking-wide text-muted uppercase">
                             <tr>
-                              <th>Estado</th>
-                              <th>Prioridad</th>
-                              <th>Días antes</th>
-                              <th>Acciones</th>
+                              <th className="px-2 py-2 font-medium">Estado</th>
+                              <th className="px-2 py-2 font-medium">Prioridad</th>
+                              <th className="px-2 py-2 font-medium">Días antes</th>
+                              <th className="px-2 py-2 font-medium">Acciones</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -356,10 +358,10 @@ function SettingsPage() {
                               const status = statusMeta(rule.status)
                               const priority = priorityMeta(rule.priority)
                               return (
-                                <tr key={`${rule.status}-${rule.priority}`}>
-                                  <td>
+                                <tr key={`${rule.status}-${rule.priority}`} className="border-t border-line">
+                                  <td className="px-2 py-2">
                                     <span
-                                      className="settings-rule-badge"
+                                      className="rounded-full px-2 py-0.5 text-xs font-semibold"
                                       style={{
                                         background: status?.bg,
                                         color: status?.color,
@@ -368,9 +370,9 @@ function SettingsPage() {
                                       {statusLabel(rule.status)}
                                     </span>
                                   </td>
-                                  <td>
+                                  <td className="px-2 py-2">
                                     <span
-                                      className="settings-rule-badge"
+                                      className="rounded-full px-2 py-0.5 text-xs font-semibold"
                                       style={{
                                         background: priority?.bg,
                                         color: priority?.color,
@@ -379,17 +381,17 @@ function SettingsPage() {
                                       {rule.priority}
                                     </span>
                                   </td>
-                                  <td>
+                                  <td className="px-2 py-2">
                                     {rule.daysBefore} {rule.daysBefore === 1 ? 'día' : 'días'}
                                   </td>
-                                  <td>
-                                    <button
-                                      type="button"
-                                      className="btn-secondary"
+                                  <td className="px-2 py-2">
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
                                       onClick={() => removeRule(rule.status, rule.priority)}
                                     >
                                       Quitar
-                                    </button>
+                                    </Button>
                                   </td>
                                 </tr>
                               )
@@ -399,10 +401,10 @@ function SettingsPage() {
                       </div>
                     )}
 
-                    <div className="settings-actions">
-                      <button type="submit" disabled={saving}>
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={saving}>
                         {saving ? 'Guardando…' : 'Guardar'}
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 )}

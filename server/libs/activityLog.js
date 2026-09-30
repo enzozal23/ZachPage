@@ -37,6 +37,7 @@ export function ticketChanges(before, after) {
   if ((before.status || '') !== (after.status || '')) changes.push(`estado → ${after.status || ''}`)
   if ((before.priority || '') !== (after.priority || '')) changes.push(`prioridad → ${after.priority || ''}`)
   if ((before.dueDate || '') !== (after.dueDate || '')) changes.push('fecha de vencimiento')
+  if ((before.expediente || '') !== (after.expediente || '')) changes.push('expediente')
   if (!sameList(before.assignees, after.assignees) || (before.assignee || '') !== (after.assignee || '')) {
     changes.push('responsables')
   }
@@ -135,6 +136,7 @@ function summarizeTicket(ticket) {
     status: ticket.status || '',
     priority: ticket.priority || '',
     dueDate: ticket.dueDate || '',
+    expediente: ticket.expediente || '',
     assignees: ticket.assignees || [],
     followers: ticket.followers || [],
     tasks: (ticket.tasks || []).map((task) => ({ text: task.text, done: task.done })),

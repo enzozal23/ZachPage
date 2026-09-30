@@ -1,12 +1,25 @@
 import { useRef, useState } from 'react'
 import { testDueReminderRequest } from '../../api/kanban.js'
 import { ticketAssignees, ticketFollowers } from '../lib/assignees.js'
-import { visibleLabels } from '../lib/persist.js'
+import { resolveExpediente, visibleLabels } from '../lib/persist.js'
+import { dueTone } from '../lib/dueTone.js'
+import { Button } from './ui/Button.jsx'
 
-const PRIORITY_CLASS = {
-  Alta: 'priority-alta',
-  Media: 'priority-media',
-  Baja: 'priority-baja',
+const PRIORITY_BADGE = {
+  Alta: 'bg-chip-red text-chip-red-ink',
+  Media: 'bg-chip-amber text-chip-amber-ink',
+  Baja: 'bg-chip-emerald text-chip-emerald-ink',
+}
+
+const PRIORITY_ACCENT = {
+  Alta: 'bg-red-500',
+  Media: 'bg-amber-400',
+  Baja: 'bg-emerald-500',
+}
+
+const DUE_SURFACE = {
+  overdue: 'bg-due-overdue',
+  near: 'bg-due-near',
 }
 
 function readCaseFacts(description) {
@@ -22,7 +35,11 @@ function readCaseFacts(description) {
   }
   if (!facts.expediente && !facts.juzgado && !facts.carátula) return null
   const juzgado = facts.juzgado && facts.juzgado !== '-' ? facts.juzgado : ''
-  return { juzgado, novedad: novedad.join(' ') }
+  return {
+    expediente: facts.expediente || '',
+    juzgado,
+    novedad: novedad.join(' '),
+  }
 }
 
 function formatDue(value) {
@@ -38,6 +55,7 @@ function TicketCard({ ticket, onEdit, onDelete }) {
   const skipClick = useRef(false)
   const comments = ticket.comments?.length || 0
   const facts = readCaseFacts(ticket.description)
+  const expediente = resolveExpediente(ticket) || String(facts?.expediente || '').trim()
   const assignees = ticketAssignees(ticket)
   const followers = ticketFollowers(ticket)
   const historyLabel = comments === 0 ? 'Historial' : comments === 1 ? '1 en el historial' : `${comments} en el historial`
@@ -63,9 +81,13 @@ function TicketCard({ ticket, onEdit, onDelete }) {
     event.dataTransfer.effectAllowed = 'move'
   }
 
+  const badge = PRIORITY_BADGE[ticket.priority] || 'bg-sunken text-muted'
+  const accent = PRIORITY_ACCENT[ticket.priority] || 'bg-line'
+  const surface = DUE_SURFACE[dueTone(ticket.dueDate)] || 'bg-surface'
+
   return (
     <article
-      className={`ticket-card tone-${ticket.priority || 'Media'} ${dragging ? 'is-dragging' : ''}`}
+      className={`flex cursor-pointer overflow-hidden rounded-xl border border-line shadow-sm transition hover:shadow-md ${surface} ${dragging ? 'opacity-60' : ''}`}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={() => setDragging(false)}
@@ -77,14 +99,16 @@ function TicketCard({ ticket, onEdit, onDelete }) {
         onEdit(ticket)
       }}
     >
-      <div className="ticket-card-header">
-        <span className={`priority-badge ${PRIORITY_CLASS[ticket.priority] || ''}`}>
+      <span className={`w-1.5 shrink-0 ${accent}`} aria-hidden="true" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className={`rounded-full px-2 py-0.5 text-[0.7rem] font-semibold tracking-wide uppercase ${badge}`}>
           {ticket.priority}
         </span>
-        <span className="ticket-drag-hint" aria-hidden="true">Arrastrar</span>
-        <button
-          type="button"
-          className="ticket-delete"
+        <span className="text-[0.7rem] tracking-wide text-muted uppercase" aria-hidden="true">Arrastrar</span>
+        <Button
+          variant="iconDanger"
+          size="icon"
           aria-label="Eliminar ticket"
           onClick={(event) => {
             event.stopPropagation()
@@ -94,64 +118,71 @@ function TicketCard({ ticket, onEdit, onDelete }) {
           }}
         >
           ×
-        </button>
+        </Button>
       </div>
 
-      <h3 className="ticket-title">{ticket.title}</h3>
+      <h3 className="font-semibold text-ink">{ticket.title}</h3>
 
-      {facts ? (
-        <dl className="ticket-facts">
-          {facts.juzgado && (
-            <div className="ticket-fact">
-              <dt>Juzgado</dt>
-              <dd>{facts.juzgado}</dd>
+      {facts || expediente ? (
+        <dl className="flex flex-col gap-1 text-sm">
+          {expediente && (
+            <div>
+              <dt className="text-[0.7rem] tracking-wide text-muted uppercase">N° expediente</dt>
+              <dd className="text-muted">{expediente}</dd>
             </div>
           )}
-          {facts.novedad && (
-            <div className="ticket-fact">
-              <dt>Novedad</dt>
-              <dd>{facts.novedad}</dd>
+          {facts?.juzgado && (
+            <div>
+              <dt className="text-[0.7rem] tracking-wide text-muted uppercase">Juzgado</dt>
+              <dd className="text-muted">{facts.juzgado}</dd>
+            </div>
+          )}
+          {facts?.novedad && (
+            <div>
+              <dt className="text-[0.7rem] tracking-wide text-muted uppercase">Novedad</dt>
+              <dd className="line-clamp-3 text-muted">{facts.novedad}</dd>
             </div>
           )}
         </dl>
       ) : (
-        ticket.description && <p className="ticket-description">{ticket.description}</p>
+        ticket.description && <p className="line-clamp-3 text-sm text-muted">{ticket.description}</p>
       )}
 
       {visibleLabels(ticket.labels).length > 0 && (
-        <div className="ticket-labels">
+        <div className="flex flex-wrap gap-1.5">
           {visibleLabels(ticket.labels).map((label) => (
-            <span key={label} className="ticket-label">{label}</span>
+            <span key={label} className="rounded-full bg-sunken px-2 py-0.5 text-[0.7rem] text-muted">{label}</span>
           ))}
         </div>
       )}
 
-      <dl className="ticket-facts">
-        <div className="ticket-fact">
-          <dt>Asignado</dt>
-          <dd>{assignees.join(', ') || 'Sin asignar'}</dd>
+      <dl className="flex flex-col gap-1 text-sm">
+        <div>
+          <dt className="text-[0.7rem] tracking-wide text-muted uppercase">Asignado</dt>
+          <dd className="text-muted">{assignees.join(', ') || 'Sin asignar'}</dd>
         </div>
         {followers.length > 0 && (
-          <div className="ticket-fact">
-            <dt>Sigue</dt>
-            <dd>{followers.join(', ')}</dd>
+          <div>
+            <dt className="text-[0.7rem] tracking-wide text-muted uppercase">Sigue</dt>
+            <dd className="text-muted">{followers.join(', ')}</dd>
           </div>
         )}
         {ticket.dueDate && (
-          <div className="ticket-fact">
-            <dt>Vence</dt>
-            <dd>{formatDue(ticket.dueDate)}</dd>
+          <div>
+            <dt className="text-[0.7rem] tracking-wide text-muted uppercase">Vence</dt>
+            <dd className="text-muted">{formatDue(ticket.dueDate)}</dd>
           </div>
         )}
       </dl>
 
-      <div className="ticket-card-actions">
+      <div className="flex items-center justify-between gap-2 text-xs text-muted">
         <span>{historyLabel}</span>
-        <button type="button" className="ticket-test-mail" onClick={handleTestMail} disabled={busy}>
+        <Button variant="secondary" size="sm" onClick={handleTestMail} disabled={busy}>
           {busy ? 'Enviando…' : 'Probar mail'}
-        </button>
+        </Button>
       </div>
-      {notice && <p className="ticket-test-notice">{notice}</p>}
+      {notice && <p className="text-xs text-muted">{notice}</p>}
+      </div>
     </article>
   )
 }

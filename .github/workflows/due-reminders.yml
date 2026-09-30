@@ -2,8 +2,10 @@ name: Lexora due reminders
 
 on:
   schedule:
-    # 07:00 America/Argentina/Buenos_Aires = 10:00 UTC
-    - cron: '0 10 * * *'
+    # 03:17 America/Argentina/Buenos_Aires = 06:17 UTC.
+    # Minuto 17, no en punto: GitHub encola menos los cron que no caen en :00.
+    # El margen es para que un atraso de unas horas siga llegando de mañana.
+    - cron: '17 6 * * *'
   workflow_dispatch:
 
 jobs:
