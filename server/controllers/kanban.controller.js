@@ -1,6 +1,13 @@
 import Kanban from '../models/kanban.model.js'
+import User from '../models/user.models.js'
 import { sendDueReminders, sendTicketDueMail } from '../kanbanReminders.js'
 import { logError, logInfo } from '../libs/appLog.js'
+import {
+  buildImportActivities,
+  buildTicketActivities,
+  requestIp,
+  writeActivities,
+} from '../libs/activityLog.js'
 
 function publicComments(comments) {
   if (!Array.isArray(comments)) return []
@@ -142,7 +149,10 @@ export const saveKanban = async (req, res) => {
   }
 
   let doc = await Kanban.findOne()
-  const previous = new Map((doc?.tickets || []).map((ticket) => [ticket.id, ticket]))
+  const previousStored = doc?.tickets || []
+  const previousRaw = previousStored.map(publicTicket)
+  const previousImports = (doc?.imports || []).map(publicImport)
+  const previous = new Map(previousStored.map((ticket) => [ticket.id, ticket]))
 
   const tickets = incoming.map((ticket) => {
     const dueDate = ticket.dueDate || ''
@@ -168,6 +178,29 @@ export const saveKanban = async (req, res) => {
 
   await doc.save()
   await logInfo('Tablero guardado', { boards: boards.length, tickets: tickets.length, imports: imports.length })
+
+  const userDoc = req.user?.id ? await User.findById(req.user.id).select('username email') : null
+  const actor = {
+    userId: String(req.user?.id || userDoc?._id || ''),
+    username: userDoc?.username || '',
+    email: userDoc?.email || '',
+  }
+  const ip = requestIp(req)
+  const activities = [
+    ...buildTicketActivities({
+      previousTickets: previousRaw,
+      nextTickets: tickets.map(publicTicket),
+      actor,
+      ip,
+    }),
+    ...buildImportActivities({
+      previousImports,
+      nextImports: (imports || []).map(publicImport),
+      actor,
+      ip,
+    }),
+  ]
+  writeActivities(activities).catch(() => {})
 
   res.json({
     boards: doc.boards,

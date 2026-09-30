@@ -8,6 +8,7 @@ import QuickAssignPanel from './components/QuickAssignPanel.jsx'
 import LoginPage from './components/LoginPage.jsx'
 import LexoraNav from './components/LexoraNav.jsx'
 import ImportsPage from './components/ImportsPage.jsx'
+import ActivityPage from './components/ActivityPage.jsx'
 import './App.css'
 
 const THEME_KEY = 'lexora-theme'
@@ -32,6 +33,7 @@ function App() {
 
   const currentBoard = store.boards.find((b) => b.id === store.selectedBoardId)
   const showImports = pathname === '/importaciones'
+  const showActivity = pathname === '/monitoreo'
   const openedTicket = ticketId
     ? store.tickets.find((ticket) => ticket.id === ticketId) || null
     : null
@@ -137,6 +139,8 @@ function App() {
             author={author}
             onImported={handleImported}
           />
+        ) : showActivity ? (
+          <ActivityPage />
         ) : (
           <Board
             board={currentBoard}

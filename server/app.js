@@ -5,6 +5,7 @@ import tasksRoutes from './routes/tasks.routes.js'
 import productsRoutes from './routes/products.routes.js'
 import kanbanRoutes from './routes/kanban.routes.js'
 import logsRoutes from './routes/logs.routes.js'
+import activityRoutes from './routes/activity.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -38,6 +39,7 @@ app.use(cors({
     credentials: true
 }));
 app.use(morgan('dev'))//ver las peticiones
+app.set('trust proxy', 1)
 app.use(express.json({ limit: '2mb' }))
 app.use(cookieParser())//
 app.use('/api', authRoutes)//rutas api
@@ -45,6 +47,7 @@ app.use('/api', tasksRoutes)
 app.use('/api', productsRoutes)
 app.use('/api', kanbanRoutes)
 app.use('/api', logsRoutes)
+app.use('/api', activityRoutes)
 
 app.get('/', (_req, res) => {
     res.redirect('https://zachpage-frontend.onrender.com/')
