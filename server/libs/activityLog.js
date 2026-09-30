@@ -181,3 +181,98 @@ export function buildImportActivities({ previousImports, nextImports, actor, ip 
 
   return entries
 }
+
+function statusLabel(statusId) {
+  const labels = {
+    pending_estimate: 'Pendiente estimación/asignación',
+    todo: 'Por hacer',
+    in_progress: 'En progreso',
+    review: 'En revisión',
+  }
+  return labels[statusId] || statusId
+}
+
+function ruleKey(rule) {
+  return `${rule.status}::${rule.priority}`
+}
+
+function actorFields(actor, ip) {
+  return {
+    userId: actor.userId || '',
+    username: actor.username || '',
+    email: actor.email || '',
+    ip,
+  }
+}
+
+export function buildSettingsActivities({ previousSettings, nextSettings, actor, ip }) {
+  const before = previousSettings || { mailNotificationsEnabled: true, dueReminders: [] }
+  const after = nextSettings || { mailNotificationsEnabled: true, dueReminders: [] }
+  const entries = []
+  const base = actorFields(actor, ip)
+
+  if (Boolean(before.mailNotificationsEnabled) !== Boolean(after.mailNotificationsEnabled)) {
+    entries.push({
+      action: 'update',
+      entity: 'settings',
+      ticketId: '',
+      ticketTitle: 'Notificaciones por mail',
+      summary: after.mailNotificationsEnabled
+        ? 'Configuración: notificaciones por mail activadas'
+        : 'Configuración: notificaciones por mail desactivadas',
+      ...base,
+      detail: {
+        field: 'mailNotificationsEnabled',
+        before: before.mailNotificationsEnabled,
+        after: after.mailNotificationsEnabled,
+      },
+    })
+  }
+
+  const prevRules = new Map((before.dueReminders || []).map((rule) => [ruleKey(rule), rule]))
+  const nextRules = new Map((after.dueReminders || []).map((rule) => [ruleKey(rule), rule]))
+
+  for (const [key, rule] of nextRules) {
+    const old = prevRules.get(key)
+    const label = `${statusLabel(rule.status)} / ${rule.priority}`
+    if (!old) {
+      entries.push({
+        action: 'create',
+        entity: 'settings',
+        ticketId: '',
+        ticketTitle: label,
+        summary: `Configuración: alta de aviso (${label}, ${rule.daysBefore} días)`,
+        ...base,
+        detail: { field: 'dueReminder', rule },
+      })
+      continue
+    }
+    if (Number(old.daysBefore) !== Number(rule.daysBefore)) {
+      entries.push({
+        action: 'update',
+        entity: 'settings',
+        ticketId: '',
+        ticketTitle: label,
+        summary: `Configuración: aviso actualizado (${label}, ${old.daysBefore} → ${rule.daysBefore} días)`,
+        ...base,
+        detail: { field: 'dueReminder', before: old, after: rule },
+      })
+    }
+  }
+
+  for (const [key, rule] of prevRules) {
+    if (nextRules.has(key)) continue
+    const label = `${statusLabel(rule.status)} / ${rule.priority}`
+    entries.push({
+      action: 'delete',
+      entity: 'settings',
+      ticketId: '',
+      ticketTitle: label,
+      summary: `Configuración: baja de aviso (${label})`,
+      ...base,
+      detail: { field: 'dueReminder', rule },
+    })
+  }
+
+  return entries
+}

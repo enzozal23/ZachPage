@@ -11,6 +11,7 @@ function LexoraNav({
   const onBoard = pathname === '/' || pathname === '/tablero' || pathname.startsWith('/t/')
   const onImports = pathname === '/importaciones'
   const onMonitor = pathname === '/monitoreo'
+  const onSettings = pathname === '/configuraciones'
   const onLogs = pathname === '/logs'
   const displayName = user?.username || user?.email || ''
   const isDark = theme === 'dark'
@@ -40,6 +41,13 @@ function LexoraNav({
             aria-current={onMonitor ? 'page' : undefined}
           >
             Monitoreo
+          </Link>
+          <Link
+            to="/configuraciones"
+            className={onSettings ? 'is-active' : ''}
+            aria-current={onSettings ? 'page' : undefined}
+          >
+            Configuraciones
           </Link>
           <Link to="/logs" className={onLogs ? 'is-active' : ''} aria-current={onLogs ? 'page' : undefined}>
             Logs

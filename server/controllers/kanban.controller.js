@@ -4,10 +4,12 @@ import { sendDueReminders, sendTicketDueMail } from '../kanbanReminders.js'
 import { logError, logInfo } from '../libs/appLog.js'
 import {
   buildImportActivities,
+  buildSettingsActivities,
   buildTicketActivities,
   requestIp,
   writeActivities,
 } from '../libs/activityLog.js'
+import { publicSettings } from '../libs/dueReminderSettings.js'
 
 function publicComments(comments) {
   if (!Array.isArray(comments)) return []
@@ -131,12 +133,58 @@ function publicImport(item) {
 
 export const getKanban = async (req, res) => {
   const doc = await Kanban.findOne()
-  if (!doc) return res.json({ boards: [], tickets: [], imports: [] })
+  if (!doc) return res.json({ boards: [], tickets: [], imports: [], settings: publicSettings({}) })
   res.json({
     boards: doc.boards,
     tickets: doc.tickets.map(publicTicket),
     imports: (doc.imports || []).map(publicImport),
+    settings: publicSettings(doc.settings),
   })
+}
+
+export const getSettings = async (_req, res) => {
+  const doc = await Kanban.findOne()
+  res.json(publicSettings(doc?.settings))
+}
+
+export const saveSettings = async (req, res) => {
+  const next = publicSettings(req.body || {})
+  const doc = await Kanban.findOne()
+  if (!doc) {
+    return res.status(404).json({ message: 'Todavía no hay un tablero guardado.' })
+  }
+
+  const previous = publicSettings(doc.settings)
+  doc.settings = next
+  doc.markModified('settings')
+  await doc.save()
+
+  const userDoc = req.user?.id ? await User.findById(req.user.id).select('username email') : null
+  const actor = {
+    userId: String(req.user?.id || userDoc?._id || ''),
+    username: userDoc?.username || '',
+    email: userDoc?.email || '',
+  }
+  const ip = requestIp(req)
+  const activities = buildSettingsActivities({
+    previousSettings: previous,
+    nextSettings: next,
+    actor,
+    ip,
+  })
+  writeActivities(activities).catch(() => {})
+
+  await logInfo('Configuración guardada', {
+    userId: actor.userId,
+    username: actor.username,
+    email: actor.email,
+    ip,
+    mailNotificationsEnabled: next.mailNotificationsEnabled,
+    dueReminders: next.dueReminders.length,
+    changes: activities.map((item) => item.summary),
+  })
+
+  res.json(publicSettings(doc.settings))
 }
 
 export const saveKanban = async (req, res) => {

@@ -31,7 +31,9 @@ export function formatDueDate(iso) {
   return `${day}/${month}/${year}`
 }
 
-export function isAboutToExpire(dueISO, today = todayISO()) {
+export function isAboutToExpire(dueISO, today = todayISO(), daysBefore = 1) {
   if (!dueISO) return false
-  return dueISO === today || dueISO === addDays(today, 1)
+  const days = Math.max(0, Number(daysBefore) || 0)
+  if (dueISO < today) return false
+  return dueISO <= addDays(today, days)
 }

@@ -9,6 +9,7 @@ import LoginPage from './components/LoginPage.jsx'
 import LexoraNav from './components/LexoraNav.jsx'
 import ImportsPage from './components/ImportsPage.jsx'
 import ActivityPage from './components/ActivityPage.jsx'
+import SettingsPage from './components/SettingsPage.jsx'
 import './App.css'
 
 const THEME_KEY = 'lexora-theme'
@@ -34,6 +35,7 @@ function App() {
   const currentBoard = store.boards.find((b) => b.id === store.selectedBoardId)
   const showImports = pathname === '/importaciones'
   const showActivity = pathname === '/monitoreo'
+  const showSettings = pathname === '/configuraciones'
   const openedTicket = ticketId
     ? store.tickets.find((ticket) => ticket.id === ticketId) || null
     : null
@@ -141,6 +143,8 @@ function App() {
           />
         ) : showActivity ? (
           <ActivityPage />
+        ) : showSettings ? (
+          <SettingsPage />
         ) : (
           <Board
             board={currentBoard}

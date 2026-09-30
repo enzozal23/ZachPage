@@ -49,7 +49,7 @@ function ActivityPage() {
       <div className="activity-hero">
         <div>
           <h2>Monitoreo</h2>
-          <p>Registro de altas, cambios y bajas del tablero.</p>
+          <p>Registro de altas, cambios y bajas del tablero y de la configuración.</p>
         </div>
         <button type="button" className="btn-secondary" onClick={load}>
           Actualizar

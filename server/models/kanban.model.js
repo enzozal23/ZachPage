@@ -50,10 +50,25 @@ const importSchema = new Schema({
   author: String,
 }, { _id: false })
 
+const dueReminderRuleSchema = new Schema({
+  status: String,
+  priority: String,
+  daysBefore: { type: Number, default: 1 },
+}, { _id: false })
+
+const settingsSchema = new Schema({
+  mailNotificationsEnabled: { type: Boolean, default: true },
+  dueReminders: [dueReminderRuleSchema],
+}, { _id: false })
+
 const kanbanSchema = new Schema({
   boards: [boardSchema],
   tickets: [ticketSchema],
   imports: [importSchema],
+  settings: {
+    type: settingsSchema,
+    default: () => ({}),
+  },
 }, { timestamps: true })
 
 export default model('Kanban', kanbanSchema)

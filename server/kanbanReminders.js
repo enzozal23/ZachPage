@@ -3,8 +3,8 @@ import Kanban from './models/kanban.model.js'
 import User from './models/user.models.js'
 import { sendMail } from './libs/mail.js'
 import { formatDueDate, isAboutToExpire, parseDueDate, todayISO } from './libs/dueDates.js'
+import { daysBeforeForTicket, publicSettings } from './libs/dueReminderSettings.js'
 import { logError, logInfo } from './libs/appLog.js'
-
 const TIME_ZONE = 'America/Argentina/Buenos_Aires'
 const DIGEST_HOUR = 7
 const CHECK_MS = 60 * 1000
@@ -69,7 +69,7 @@ function digestBody({ username, items, today }) {
   const lines = [
     `Hola ${username || ''},`.trim(),
     '',
-    `Estas son las tarjetas de Lexora que vencen hoy o mañana (${formatDueDate(today)}):`,
+    `Estas son las tarjetas de Lexora dentro de la ventana de aviso configurada (${formatDueDate(today)}):`,
     '',
   ]
 
@@ -201,11 +201,30 @@ export async function sendDueReminders({ trigger = 'interno' } = {}) {
   }
 
   const today = todayISO()
+  const settings = publicSettings(doc.settings)
+
+  if (!settings.mailNotificationsEnabled) {
+    const summary = {
+      trigger,
+      startedAt,
+      today,
+      reviewed: 0,
+      mails: 0,
+      recipients: [],
+      changed: false,
+      reason: 'notificaciones_desactivadas',
+    }
+    await logInfo('Cron de vencimientos: mails desactivados en configuración', summary)
+    return summary
+  }
+
   const dueTickets = []
   for (const ticket of doc.tickets) {
     if (ticket.status === 'done') continue
     const due = parseDueDate(ticket.dueDate)
-    if (!due || !isAboutToExpire(due, today)) continue
+    const daysBefore = daysBeforeForTicket(ticket, settings.dueReminders)
+    if (daysBefore == null) continue
+    if (!due || !isAboutToExpire(due, today, daysBefore)) continue
     if (ticket.reminderSentFor === due) continue
     dueTickets.push(ticket)
   }
@@ -215,6 +234,7 @@ export async function sendDueReminders({ trigger = 'interno' } = {}) {
     today,
     ticketsTotales: doc.tickets.length,
     porVencer: dueTickets.length,
+    reglas: settings.dueReminders.length,
     titulos: dueTickets.map((ticket) => ticket.title).slice(0, 20),
   })
 
