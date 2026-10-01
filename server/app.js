@@ -2,7 +2,6 @@ import express from 'express'
 import morgan from 'morgan'
 import authRoutes from './routes/auth.routes.js'
 import tasksRoutes from './routes/tasks.routes.js'
-import productsRoutes from './routes/products.routes.js'
 import kanbanRoutes from './routes/kanban.routes.js'
 import logsRoutes from './routes/logs.routes.js'
 import activityRoutes from './routes/activity.routes.js'
@@ -21,8 +20,6 @@ dotenv.config()
 const allowedOrigins = [
     'https://zachpage-frontend.onrender.com',
     'https://lexora-board.onrender.com',
-    'https://www.zachsuplementos.com',
-    'https://zachsuplementos.com',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ];
@@ -44,7 +41,6 @@ app.use(express.json({ limit: '2mb' }))
 app.use(cookieParser())//
 app.use('/api', authRoutes)//rutas api
 app.use('/api', tasksRoutes)
-app.use('/api', productsRoutes)
 app.use('/api', kanbanRoutes)
 app.use('/api', logsRoutes)
 app.use('/api', activityRoutes)

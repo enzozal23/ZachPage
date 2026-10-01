@@ -27,53 +27,6 @@ function Navbar() {
                             <li className="bg-[#7e76f0] text-black px-4 py-2">
                                 <span className="font-semibold text-2xl text-white">Admin: {user.username}</span>
                             </li>
-                            {/* Ecommerce
-                            <li>
-                                <Link
-                                    to="/FormProducts"
-                                    onClick={closeMenu}
-                                    className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300 lg:mt-0 mt-2"
-                                >
-                                    Agregar/Actualizar
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/products"
-                                    onClick={closeMenu}
-                                    className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300"
-                                >
-                                    productos
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/ventas"
-                                    onClick={closeMenu}
-                                    className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300 lg:mt-0 mt-2"
-                                >
-                                    Ventas
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/ventasWeb"
-                                    onClick={closeMenu}
-                                    className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300 lg:mt-0 mt-2"
-                                >
-                                    VentasWeb
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/vender"
-                                    onClick={closeMenu}
-                                    className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300 lg:mt-0 mt-2"
-                                >
-                                    Vender
-                                </Link>
-                            </li>
-                            */}
                             <li>
                                 <Link
                                     to="/"
@@ -137,23 +90,6 @@ function Navbar() {
                     {isAuthenticated ? (
                         <>
                             <li className="text-xl text-white">Admin: {user.username}</li>
-                            {/* Ecommerce
-                            <li>
-                                <Link to="/FormProducts" onClick={closeMenu} className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300">Agregar/Actualizar</Link>
-                            </li>
-                            <li>
-                                <Link to="/products" onClick={closeMenu} className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300">productos</Link>
-                            </li>
-                            <li>
-                                <Link to="/ventas" onClick={closeMenu} className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300">Ventas</Link>
-                            </li>
-                            <li>
-                                <Link to="/ventasWeb" onClick={closeMenu} className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300">VentasWeb</Link>
-                            </li>
-                            <li>
-                                <Link to="/vender" onClick={closeMenu} className="text-white font-semibold text-1xl px-4 py-2 border-2 hover:bg-[#7e76f0] transition-colors duration-300">Vender</Link>
-                            </li>
-                            */}
                             <li>
                                 <Link
                                     to="/"
