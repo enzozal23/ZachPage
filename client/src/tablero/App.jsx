@@ -30,7 +30,7 @@ function App() {
   const { ticketId } = useParams()
   const navigate = useNavigate()
   const { user, loading, logout, signin, isAuthenticated, errors } = useAuth()
-  const store = useKanbanStore()
+  const store = useKanbanStore(isAuthenticated)
   const [creating, setCreating] = useState(null)
   const [importedBatch, setImportedBatch] = useState(null)
   const [theme, setTheme] = useState(readTheme)

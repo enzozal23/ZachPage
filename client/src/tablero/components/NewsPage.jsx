@@ -1,5 +1,16 @@
 const RELEASES = [
   {
+    date: '1 de octubre de 2026',
+    groups: [
+      {
+        title: 'Corrección',
+        items: [
+          'El primer ingreso ya no avisa que no se pudo leer el tablero. Ahora se carga cuando la sesión está lista.',
+        ],
+      },
+    ],
+  },
+  {
     date: '30 de septiembre de 2026',
     groups: [
       {

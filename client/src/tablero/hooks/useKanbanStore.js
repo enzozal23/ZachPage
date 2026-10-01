@@ -112,7 +112,7 @@ function mergeStored(remote, stored) {
   }
 }
 
-export function useKanbanStore() {
+export function useKanbanStore(enabled = false) {
   const [state, setState] = useState(null)
   const [ready, setReady] = useState(false)
   const [saveError, setSaveError] = useState(null)
@@ -122,6 +122,7 @@ export function useKanbanStore() {
   stateRef.current = state
 
   useEffect(() => {
+    if (!enabled) return undefined
     let cancelled = false
 
     async function load() {
@@ -210,11 +211,13 @@ export function useKanbanStore() {
       }
     }
 
+    setReady(false)
+    setSaveError(null)
     load()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
     if (!ready || !state || !dirty.current) return
