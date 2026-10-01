@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
+import { ticketsFromImport } from '../lib/importTickets.js'
 import { parseWordDocx } from '../lib/wordImport.js'
 import { Button } from './ui/Button.jsx'
+import { confirmDialog } from '../lib/dialog.js'
 import { panelClass } from './ui/styles.js'
 
 function formatWhen(value) {
@@ -11,8 +13,10 @@ function formatWhen(value) {
 function ImportsPage({
   board,
   imports,
+  tickets,
   author,
   onImported,
+  onDeleteImport,
 }) {
   const inputRef = useRef(null)
   const [busy, setBusy] = useState(false)
@@ -48,6 +52,18 @@ function ImportsPage({
     }
   }
 
+  async function handleDelete(item) {
+    const count = ticketsFromImport(tickets, item).length
+    const noun = count === 1 ? 'ticket' : 'tickets'
+    const confirmed = await confirmDialog({
+      title: '¿Eliminar la importación?',
+      text: `"${item.fileName || 'sin nombre'}". También se van a borrar ${count} ${noun} que salieron de ese archivo.`,
+      confirmText: 'Eliminar',
+    })
+    if (!confirmed) return
+    onDeleteImport(item.id)
+  }
+
   return (
     <section className="flex flex-1 flex-col gap-4 px-6 py-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -76,10 +92,13 @@ function ImportsPage({
               <h3 className="font-semibold text-ink">{item.fileName}</h3>
               <p className="text-sm text-muted">{item.boardName || 'Sin tablero'} · {item.author || 'Sin autor'}</p>
             </div>
-            <div className="flex flex-wrap gap-3 text-sm text-muted">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
               <span>{item.imported} tickets</span>
               <span>{item.skippedNoTitle || 0} sin título</span>
               <time>{formatWhen(item.createdAt)}</time>
+              <Button variant="danger" size="sm" onClick={() => handleDelete(item)}>
+                Eliminar
+              </Button>
             </div>
           </article>
         ))}

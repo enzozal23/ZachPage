@@ -1,53 +1,169 @@
 import ActivityLog from '../models/activity.model.js'
 
-function sameList(a, b) {
-  const left = JSON.stringify([...(a || [])].map(String).sort())
-  const right = JSON.stringify([...(b || [])].map(String).sort())
-  return left === right
-}
-
-function sameTasks(a, b) {
-  const norm = (list) => (list || []).map((task) => ({
-    id: String(task.id || ''),
-    text: String(task.text || ''),
-    done: Boolean(task.done),
-  }))
-  return JSON.stringify(norm(a)) === JSON.stringify(norm(b))
-}
-
-function sameComments(a, b) {
-  const norm = (list) => (list || []).map((comment) => ({
-    id: String(comment.id || ''),
-    text: String(comment.text || ''),
-    author: String(comment.author || ''),
-  }))
-  return JSON.stringify(norm(a)) === JSON.stringify(norm(b))
-}
-
 export function requestIp(req) {
   const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()
   if (forwarded) return forwarded
   return req.ip || req.socket?.remoteAddress || ''
 }
 
+function clip(value, max = 90) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim()
+  if (!text) return 'vacío'
+  return text.length > max ? `${text.slice(0, max)}…` : text
+}
+
+function quote(value) {
+  return `«${clip(value)}»`
+}
+
+function names(list) {
+  return [...new Set((Array.isArray(list) ? list : String(list || '').split(','))
+    .map((item) => String(item || '').trim())
+    .filter(Boolean))]
+}
+
+function listDiff(before, after) {
+  const prev = new Set(names(before))
+  const next = new Set(names(after))
+  return {
+    added: [...next].filter((item) => !prev.has(item)),
+    removed: [...prev].filter((item) => !next.has(item)),
+  }
+}
+
+function byId(list, keyOf) {
+  const map = new Map()
+  for (const item of list || []) {
+    const id = keyOf ? keyOf(item) : String(item?.id || '').trim()
+    if (id) map.set(id, item)
+  }
+  return map
+}
+
+function commentKey(comment) {
+  const id = String(comment?.id || '').trim()
+  if (id) return id
+  return `${comment?.createdAt || ''}|${comment?.author || ''}|${comment?.text || ''}`
+}
+
 export function ticketChanges(before, after) {
   const changes = []
-  if ((before.title || '') !== (after.title || '')) changes.push('título')
-  if ((before.description || '') !== (after.description || '')) changes.push('descripción')
-  if ((before.status || '') !== (after.status || '')) changes.push(`estado → ${after.status || ''}`)
-  if ((before.priority || '') !== (after.priority || '')) changes.push(`prioridad → ${after.priority || ''}`)
-  if ((before.dueDate || '') !== (after.dueDate || '')) changes.push('fecha de vencimiento')
-  if ((before.expediente || '') !== (after.expediente || '')) changes.push('expediente')
-  if (!sameList(before.assignees, after.assignees) || (before.assignee || '') !== (after.assignee || '')) {
-    changes.push('responsables')
+  const push = (action, summary, detail) => changes.push({ action, summary, detail })
+
+  if ((before.title || '') !== (after.title || '')) {
+    push('update', `Actualizó el título: ${quote(before.title)} → ${quote(after.title)}`, {
+      field: 'title',
+      before: before.title || '',
+      after: after.title || '',
+    })
   }
-  if (!sameList(before.followers, after.followers)) changes.push('seguidores')
-  if (!sameList(before.labels, after.labels)) changes.push('etiquetas')
-  if (!sameTasks(before.tasks, after.tasks) || (before.task || '') !== (after.task || '')) {
-    changes.push('tareas')
+  if ((before.description || '') !== (after.description || '')) {
+    push('update', `Actualizó la descripción: ${quote(after.description)}`, {
+      field: 'description',
+      before: before.description || '',
+      after: after.description || '',
+    })
   }
-  if (!sameComments(before.comments, after.comments)) changes.push('historial')
-  if ((before.boardId || '') !== (after.boardId || '')) changes.push('tablero')
+  if ((before.status || '') !== (after.status || '')) {
+    push('update', `Actualizó el estado: ${statusLabel(before.status)} → ${statusLabel(after.status)}`, {
+      field: 'status',
+      before: before.status || '',
+      after: after.status || '',
+    })
+  }
+  if ((before.priority || '') !== (after.priority || '')) {
+    push('update', `Actualizó la prioridad: ${quote(before.priority)} → ${quote(after.priority)}`, {
+      field: 'priority',
+      before: before.priority || '',
+      after: after.priority || '',
+    })
+  }
+  if ((before.dueDate || '') !== (after.dueDate || '')) {
+    push('update', `Actualizó la fecha límite: ${quote(before.dueDate)} → ${quote(after.dueDate)}`, {
+      field: 'dueDate',
+      before: before.dueDate || '',
+      after: after.dueDate || '',
+    })
+  }
+  if ((before.expediente || '') !== (after.expediente || '')) {
+    push('update', `Actualizó el N° de expediente: ${quote(before.expediente)} → ${quote(after.expediente)}`, {
+      field: 'expediente',
+      before: before.expediente || '',
+      after: after.expediente || '',
+    })
+  }
+  if ((before.boardId || '') !== (after.boardId || '')) {
+    push('update', 'Movió la tarjeta de tablero', {
+      field: 'boardId',
+      before: before.boardId || '',
+      after: after.boardId || '',
+    })
+  }
+
+  const people = [
+    ['responsable', names(before.assignees?.length ? before.assignees : before.assignee), names(after.assignees?.length ? after.assignees : after.assignee)],
+    ['seguidor', names(before.followers), names(after.followers)],
+    ['etiqueta', names(before.labels), names(after.labels)],
+  ]
+  for (const [noun, prev, next] of people) {
+    const { added, removed } = listDiff(prev, next)
+    for (const item of added) {
+      push('create', `Agregó ${noun === 'etiqueta' ? 'la etiqueta' : `el ${noun}`} ${quote(item)}`, { field: noun, added: item })
+    }
+    for (const item of removed) {
+      push('delete', `Eliminó ${noun === 'etiqueta' ? 'la etiqueta' : `el ${noun}`} ${quote(item)}`, { field: noun, removed: item })
+    }
+  }
+
+  const beforeTasks = byId(before.tasks)
+  const afterTasks = byId(after.tasks)
+  for (const [id, task] of afterTasks) {
+    const old = beforeTasks.get(id)
+    if (!old) {
+      push('create', `Agregó la tarea ${quote(task.text)}`, { field: 'tasks', added: task.text || '' })
+      continue
+    }
+    if (String(old.text || '') !== String(task.text || '')) {
+      push('update', `Actualizó la tarea: ${quote(old.text)} → ${quote(task.text)}`, {
+        field: 'tasks',
+        before: old.text || '',
+        after: task.text || '',
+      })
+    }
+    if (Boolean(old.done) !== Boolean(task.done)) {
+      push('update', `${task.done ? 'Marcó como hecha' : 'Marcó como pendiente'} la tarea ${quote(task.text)}`, {
+        field: 'tasks',
+        id,
+        done: Boolean(task.done),
+      })
+    }
+  }
+  for (const [id, task] of beforeTasks) {
+    if (afterTasks.has(id)) continue
+    push('delete', `Eliminó la tarea ${quote(task.text)}`, { field: 'tasks', removed: task.text || '' })
+  }
+
+  const beforeComments = byId(before.comments, commentKey)
+  const afterComments = byId(after.comments, commentKey)
+  for (const [id, comment] of afterComments) {
+    const old = beforeComments.get(id)
+    if (!old) {
+      push('create', `Agregó al historial: ${quote(comment.text)}`, { field: 'comments', added: comment.text || '' })
+      continue
+    }
+    if (String(old.text || '') !== String(comment.text || '')) {
+      push('update', `Actualizó el historial: ${quote(old.text)} → ${quote(comment.text)}`, {
+        field: 'comments',
+        before: old.text || '',
+        after: comment.text || '',
+      })
+    }
+  }
+  for (const [id, comment] of beforeComments) {
+    if (afterComments.has(id)) continue
+    push('delete', `Eliminó del historial: ${quote(comment.text)}`, { field: 'comments', removed: comment.text || '' })
+  }
+
   return changes
 }
 
@@ -81,7 +197,7 @@ export function buildTicketActivities({ previousTickets, nextTickets, actor, ip 
         entity: 'ticket',
         ticketId: id,
         ticketTitle: ticket.title || '',
-        summary: `Alta de tarjeta: ${ticket.title || id}`,
+        summary: `Agregó la tarjeta ${quote(ticket.title || id)}`,
         userId: actor.userId || '',
         username: actor.username || '',
         email: actor.email || '',
@@ -95,20 +211,20 @@ export function buildTicketActivities({ previousTickets, nextTickets, actor, ip 
       })
       continue
     }
-    const changes = ticketChanges(old, ticket)
-    if (!changes.length) continue
-    entries.push({
-      action: 'update',
-      entity: 'ticket',
-      ticketId: id,
-      ticketTitle: ticket.title || old.title || '',
-      summary: `Actualización de tarjeta: ${changes.join(', ')}`,
-      userId: actor.userId || '',
-      username: actor.username || '',
-      email: actor.email || '',
-      ip,
-      detail: { changes, before: summarizeTicket(old), after: summarizeTicket(ticket) },
-    })
+    for (const change of ticketChanges(old, ticket)) {
+      entries.push({
+        action: change.action,
+        entity: 'ticket',
+        ticketId: id,
+        ticketTitle: ticket.title || old.title || '',
+        summary: change.summary,
+        userId: actor.userId || '',
+        username: actor.username || '',
+        email: actor.email || '',
+        ip,
+        detail: change.detail,
+      })
+    }
   }
 
   for (const [id, ticket] of prev) {
@@ -118,7 +234,7 @@ export function buildTicketActivities({ previousTickets, nextTickets, actor, ip 
       entity: 'ticket',
       ticketId: id,
       ticketTitle: ticket.title || '',
-      summary: `Eliminación de tarjeta: ${ticket.title || id}`,
+      summary: `Eliminó la tarjeta ${quote(ticket.title || id)}`,
       userId: actor.userId || '',
       username: actor.username || '',
       email: actor.email || '',
@@ -190,6 +306,7 @@ function statusLabel(statusId) {
     todo: 'Por hacer',
     in_progress: 'En progreso',
     review: 'En revisión',
+    done: 'Hecho',
   }
   return labels[statusId] || statusId
 }

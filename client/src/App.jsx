@@ -6,17 +6,15 @@ import { AuthProvider } from './context/AuthContext.jsx'
 // import TaskPage from './pages/TaskPage.jsx'
 // import TaskFormPage from './pages/TaskFormPage.jsx'
 // import ProfilePage from './pages/ProfilePage.jsx'
-import ProtectedRoute from './ProtectedRoute.jsx'
 import { TaskProvider } from './context/TaskContext.jsx'
 import Navbar from './components/Navbar.jsx'
 import NotFound from './pages/NotFound.jsx'
-import LogsPage from './pages/LogsPage.jsx'
 
 const TableroKanban = lazy(() => import('./tablero/App.jsx'))
 
 function AppShell() {
   const { pathname } = useLocation()
-  const isTablero = pathname === '/' || pathname === '/tablero' || pathname === '/importaciones' || pathname === '/monitoreo' || pathname === '/configuraciones' || pathname === '/usuarios' || pathname === '/novedades' || pathname.startsWith('/t/')
+  const isTablero = pathname === '/' || pathname === '/tablero' || pathname === '/importaciones' || pathname === '/monitoreo' || pathname.startsWith('/monitoreo/') || pathname === '/logs' || pathname === '/configuraciones' || pathname === '/usuarios' || pathname === '/clientes' || pathname === '/novedades' || pathname.startsWith('/t/')
 
   return (
     <>
@@ -33,18 +31,13 @@ function AppShell() {
                 <Route path="/" />
                 <Route path="/tablero" />
                 <Route path="/importaciones" />
-                <Route path="/monitoreo" />
+                <Route path="/monitoreo/*" />
+                <Route path="/logs" />
                 <Route path="/configuraciones" />
                 <Route path="/usuarios" />
+                <Route path="/clientes" />
                 <Route path="/novedades" />
                 <Route path="/t/:ticketId" />
-              </Route>
-              <Route element={<ProtectedRoute />}>
-                {/* <Route path="/tasks" element={<TaskPage />} />
-                <Route path="/task/new" element={<TaskFormPage />} />
-                <Route path="/task/:id" element={<TaskFormPage />} />
-                <Route path="/profile" element={<ProfilePage />} /> */}
-                <Route path="/logs" element={<LogsPage />} />
               </Route>
               <Route path='*' element={<NotFound />} />
             </Routes>

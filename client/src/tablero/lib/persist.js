@@ -49,6 +49,7 @@ export function unpackTicket(ticket) {
   return {
     ...ticket,
     expediente: resolveExpediente(ticket, extra),
+    importId: String(ticket?.importId || extra?.importId || '').trim(),
     labels: visibleLabels(ticket?.labels),
     ...(tasks ? { tasks } : {}),
     ...(assignees ? { assignees } : {}),
@@ -100,6 +101,7 @@ export function packTicket(ticket, imports) {
     comments: Array.isArray(ticket.comments) ? ticket.comments : [],
     tasks,
     expediente,
+    importId: String(ticket.importId || '').trim(),
     ...(imports ? { imports } : {}),
   }
   const pending = tasks.filter((task) => !task.done).map((task) => task.text).join('; ')

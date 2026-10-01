@@ -16,12 +16,14 @@ function LexoraNav({
   user,
   onLogout,
 }) {
+  const onSystemLogs = pathname === '/monitoreo/sistema' || pathname === '/logs'
   const onBoard = pathname === '/' || pathname === '/tablero' || pathname.startsWith('/t/')
   const onImports = pathname === '/importaciones'
-  const onMonitor = pathname === '/monitoreo'
+  const onMonitor = (pathname === '/monitoreo' || pathname.startsWith('/monitoreo/')) && !onSystemLogs
   const onSettings = pathname === '/configuraciones'
   const onUsers = pathname === '/usuarios'
-  const onLogs = pathname === '/logs'
+  const onClients = pathname === '/clientes'
+  const onLogs = onSystemLogs
   const onNews = pathname === '/novedades'
   const displayName = user?.username || user?.email || ''
   const isDark = theme === 'dark'
@@ -37,6 +39,9 @@ function LexoraNav({
         <nav className="flex flex-wrap items-center gap-1" aria-label="Secciones">
           <Link to="/" className={linkClass(onBoard)} aria-current={onBoard ? 'page' : undefined}>
             Tablero
+          </Link>
+          <Link to="/clientes" className={linkClass(onClients)} aria-current={onClients ? 'page' : undefined}>
+            Clientes
           </Link>
           <Link
             to="/importaciones"
@@ -59,7 +64,7 @@ function LexoraNav({
           >
             Configuraciones
           </Link>
-          <Link to="/logs" className={linkClass(onLogs)} aria-current={onLogs ? 'page' : undefined}>
+          <Link to="/monitoreo/sistema" className={linkClass(onLogs)} aria-current={onLogs ? 'page' : undefined}>
             Logs
           </Link>
           <Link to="/novedades" className={linkClass(onNews)} aria-current={onNews ? 'page' : undefined}>

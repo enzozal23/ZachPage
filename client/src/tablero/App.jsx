@@ -12,6 +12,7 @@ import ActivityPage from './components/ActivityPage.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
 import UsersPage from './components/UsersPage.jsx'
 import NewsPage from './components/NewsPage.jsx'
+import ClientsPage from './components/ClientsPage.jsx'
 
 const shellClass = 'flex min-h-dvh flex-col bg-canvas font-sans text-ink'
 
@@ -37,9 +38,10 @@ function App() {
 
   const currentBoard = store.boards.find((b) => b.id === store.selectedBoardId)
   const showImports = pathname === '/importaciones'
-  const showActivity = pathname === '/monitoreo'
+  const showActivity = pathname === '/monitoreo' || pathname.startsWith('/monitoreo/') || pathname === '/logs'
   const showSettings = pathname === '/configuraciones'
   const showUsers = pathname === '/usuarios'
+  const showClients = pathname === '/clientes'
   const showNews = pathname === '/novedades'
   const openedTicket = ticketId
     ? store.tickets.find((ticket) => ticket.id === ticketId) || null
@@ -146,8 +148,18 @@ function App() {
           <ImportsPage
             board={currentBoard}
             imports={store.imports}
+            tickets={store.allTickets}
             author={author}
             onImported={handleImported}
+            onDeleteImport={(id) => {
+              const removed = store.deleteImport(id)
+              setImportedBatch((current) => {
+                if (!current) return current
+                const ids = current.ids.filter((ticketId) => !removed.includes(ticketId))
+                return ids.length ? { ...current, ids } : null
+              })
+              if (ticketId && removed.includes(ticketId)) navigate('/', { replace: true })
+            }}
           />
         ) : showActivity ? (
           <ActivityPage />
@@ -155,6 +167,8 @@ function App() {
           <SettingsPage />
         ) : showUsers ? (
           <UsersPage />
+        ) : showClients ? (
+          <ClientsPage />
         ) : showNews ? (
           <NewsPage />
         ) : (
@@ -188,8 +202,11 @@ function App() {
               if (ticketId) navigate('/')
             }}
             onAddComment={(id, text) => store.addComment(id, { text, author })}
+            onDeleteComment={store.deleteComment}
             onAddTask={store.addTicketTask}
             onToggleTask={store.toggleTicketTask}
+            onDeleteTask={store.deleteTicketTask}
+            onPatch={(data) => openedTicket && store.updateTicket(openedTicket.id, data)}
             onSave={(data) => {
               if (openedTicket) {
                 store.updateTicket(openedTicket.id, data)

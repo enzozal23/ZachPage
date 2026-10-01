@@ -5,6 +5,7 @@ import tasksRoutes from './routes/tasks.routes.js'
 import kanbanRoutes from './routes/kanban.routes.js'
 import logsRoutes from './routes/logs.routes.js'
 import activityRoutes from './routes/activity.routes.js'
+import clientsRoutes from './routes/clients.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -44,6 +45,7 @@ app.use('/api', tasksRoutes)
 app.use('/api', kanbanRoutes)
 app.use('/api', logsRoutes)
 app.use('/api', activityRoutes)
+app.use('/api', clientsRoutes)
 
 app.get('/', (_req, res) => {
     res.redirect('https://zachpage-frontend.onrender.com/')

@@ -8,6 +8,7 @@ import {
 } from '../../api/auth.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { Button } from './ui/Button.jsx'
+import { confirmDialog } from '../lib/dialog.js'
 import { Field } from './ui/Field.jsx'
 import { controlClass } from './ui/styles.js'
 
@@ -143,7 +144,12 @@ function UsersPage() {
   }
 
   async function handleDelete(account) {
-    if (!window.confirm(`¿Eliminar a ${account.username || account.email}?`)) return
+    const confirmed = await confirmDialog({
+      title: '¿Eliminar el usuario?',
+      text: account.username || account.email || '',
+      confirmText: 'Eliminar',
+    })
+    if (!confirmed) return
     setError(null)
     setNotice(null)
     try {

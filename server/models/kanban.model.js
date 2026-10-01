@@ -37,6 +37,7 @@ const ticketSchema = new Schema({
   tasks: [taskItemSchema],
   createdAt: String,
   source: String,
+  importId: String,
   reminderSentFor: String,
   comments: [commentSchema],
 }, { _id: false })

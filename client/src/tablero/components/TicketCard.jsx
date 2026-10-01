@@ -4,6 +4,7 @@ import { ticketAssignees, ticketFollowers } from '../lib/assignees.js'
 import { resolveExpediente, visibleLabels } from '../lib/persist.js'
 import { dueTone } from '../lib/dueTone.js'
 import { Button } from './ui/Button.jsx'
+import { confirmDialog } from '../lib/dialog.js'
 
 const PRIORITY_BADGE = {
   Alta: 'bg-chip-red text-chip-red-ink',
@@ -110,11 +111,14 @@ function TicketCard({ ticket, onEdit, onDelete }) {
           variant="iconDanger"
           size="icon"
           aria-label="Eliminar ticket"
-          onClick={(event) => {
+          onClick={async (event) => {
             event.stopPropagation()
-            if (window.confirm(`¿Eliminar el ticket "${ticket.title}"?`)) {
-              onDelete(ticket.id)
-            }
+            const confirmed = await confirmDialog({
+              title: '¿Eliminar el ticket?',
+              text: ticket.title || 'Sin título',
+              confirmText: 'Eliminar',
+            })
+            if (confirmed) onDelete(ticket.id)
           }}
         >
           ×

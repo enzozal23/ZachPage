@@ -113,6 +113,7 @@ function publicTicket(ticket) {
     tasks,
     createdAt: ticket.createdAt || '',
     source: ticket.source || 'manual',
+    importId: String(ticket.importId || extra?.importId || '').trim(),
     comments,
   }
 }

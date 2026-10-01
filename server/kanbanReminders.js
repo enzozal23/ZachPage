@@ -153,6 +153,7 @@ export async function sendDueDigest({ tickets, boards, markSent = true }) {
     const items = pack.items
     await sendMail({
       to: email,
+      kind: 'vencimiento',
       subject: items.length === 1
         ? `Lexora — Vence pronto: ${items[0].title}`
         : `Lexora — ${items.length} tarjetas por vencer`,

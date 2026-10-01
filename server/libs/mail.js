@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
-import { logError, logInfo } from './appLog.js'
+import MailLog from '../models/mailLog.model.js'
+import { logError } from './appLog.js'
 
 dotenv.config()
 
@@ -29,10 +30,24 @@ const transport = nodemailer.createTransport({
   socketTimeout: 15000,
 })
 
+function recipientsOf(to) {
+  const list = Array.isArray(to) ? to : [to]
+  return list.map((item) => String(item || '').trim()).filter(Boolean)
+}
+
+async function recordMail(entry) {
+  try {
+    await MailLog.create({
+      ...entry,
+      text: String(entry.text || '').slice(0, 8000),
+    })
+  } catch (error) {
+    console.error('[mail-log] no se pudo guardar', error.message)
+  }
+}
+
 async function sendWithResend({ to, subject, text, apiKey }) {
   const from = process.env.MAIL_FROM || 'ZachSuplementos <onboarding@resend.dev>'
-  await logInfo('Enviando mail por Resend', { to, subject, from })
-
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -46,74 +61,60 @@ async function sendWithResend({ to, subject, text, apiKey }) {
   if (!response.ok) {
     const error = new Error(body?.message || `Resend respondió ${response.status}`)
     error.status = response.status
-    error.response = JSON.stringify(body)
     throw error
   }
 
-  await logInfo('Mail aceptado por HTTPS', { to, subject, id: body.id })
-  return body
+  return { from, messageId: body.id || '', raw: body }
 }
 
 async function sendWithGmail({ to, subject, text }) {
-  await logInfo('Enviando mail por SMTP', {
-    to,
-    subject,
-    host: 'smtp.gmail.com',
-    port: 587,
-    fromUser: process.env.GMAIL_USER || 'GMAIL_USER vacío',
-    passwordConfigured: Boolean(process.env.GMAIL_PASS),
-  })
-
   const result = await transport.sendMail({
     from: FROM,
     to,
     subject,
     text,
   })
-
-  await logInfo('Gmail aceptó el mail', {
-    to,
-    subject,
-    messageId: result.messageId,
-    response: result.response,
-  })
-  return result
+  return { from: FROM, messageId: result.messageId || '', raw: result }
 }
 
-export async function sendMail({ to, subject, text }) {
+export async function sendMail({ to, subject, text, kind = 'general' }) {
+  const recipients = recipientsOf(to)
+  const base = {
+    to: recipients,
+    subject: String(subject || ''),
+    text: String(text || ''),
+    kind: String(kind || 'general'),
+  }
   const onRender = Boolean(process.env.RENDER)
   const resend = resendCredentials()
 
-  const pistas = Object.keys(process.env).filter((key) => /resend|mail|gmail/i.test(key))
-  await logInfo('Revisando cómo enviar el mail', {
-    resendConfigurada: Boolean(resend),
-    nombreVariable: resend?.name || 'no encontré ninguna variable con resend',
-    variablesParecidas: pistas,
-    enRender: onRender,
-  })
-
   if (resend) {
+    const from = process.env.MAIL_FROM || 'ZachSuplementos <onboarding@resend.dev>'
     try {
-      return await sendWithResend({ to, subject, text, apiKey: resend.value })
+      const result = await sendWithResend({ to: recipients, subject: base.subject, text: base.text, apiKey: resend.value })
+      await recordMail({ ...base, from: result.from, status: 'sent', provider: 'resend', messageId: result.messageId })
+      return result.raw
     } catch (error) {
-      await logError('Falló el envío por Resend', error, { to, subject, nombreVariable: resend.name })
+      await recordMail({ ...base, from, status: 'failed', provider: 'resend', error: error.message || 'No se pudo enviar' })
+      await logError('Falló el envío por Resend', error, { to: recipients, subject: base.subject })
       throw error
     }
   }
 
   if (onRender) {
-    const error = new Error(
-      'La clave de Resend no se encontró. En Render tiene que llamarse RESEND_API_KEY, o el nombre tiene que incluir la palabra resend. El timeout anterior fue Gmail, no Resend.',
-    )
-    error.code = 'ETIMEDOUT'
-    await logError('No se puede usar SMTP en Render', error, { to, subject })
+    const error = new Error('La clave de Resend no se encontró en el servidor.')
+    await recordMail({ ...base, from: FROM, status: 'failed', provider: 'resend', error: error.message })
+    await logError('No se puede usar SMTP en Render', error, { to: recipients, subject: base.subject })
     throw error
   }
 
   try {
-    return await sendWithGmail({ to, subject, text })
+    const result = await sendWithGmail({ to: recipients, subject: base.subject, text: base.text })
+    await recordMail({ ...base, from: result.from, status: 'sent', provider: 'gmail', messageId: result.messageId })
+    return result.raw
   } catch (error) {
-    await logError('Gmail no aceptó la conexión', error, { to, subject })
+    await recordMail({ ...base, from: FROM, status: 'failed', provider: 'gmail', error: error.message || 'No se pudo enviar' })
+    await logError('Gmail no aceptó la conexión', error, { to: recipients, subject: base.subject })
     throw error
   }
 }

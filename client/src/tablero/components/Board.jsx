@@ -3,6 +3,7 @@ import { COLUMNS, ticketColumnId } from '../constants/columns.js'
 import Column from './Column.jsx'
 import BoardFilters from './BoardFilters.jsx'
 import { Button } from './ui/Button.jsx'
+import { confirmDialog } from '../lib/dialog.js'
 import {
   EMPTY_FILTERS,
   applyBoardFilters,
@@ -60,10 +61,13 @@ function Board({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="danger"
-            onClick={() => {
-              if (window.confirm('Esto borra todos los tableros y tickets. ¿Confirmás?')) {
-                onResetAll()
-              }
+            onClick={async () => {
+              const confirmed = await confirmDialog({
+                title: '¿Eliminar todo?',
+                text: 'Esto borra todos los tableros y tickets.',
+                confirmText: 'Eliminar',
+              })
+              if (confirmed) onResetAll()
             }}
           >
             Eliminar todo

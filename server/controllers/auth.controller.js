@@ -5,6 +5,8 @@ import Kanban from '../models/kanban.model.js'
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
 import { readToken } from '../middlewares/validateToken.js';
+import { requestIp } from '../libs/activityLog.js';
+import { writeSessionLog } from '../libs/sessionLog.js';
 
 const cookieOptions = {
     sameSite: 'none',
@@ -49,19 +51,37 @@ export const register = async (req, res) => {
 }
 export const login = async (req, res) => {
     const { email, password } = req.body
+    const ip = requestIp(req)
 
     try {
         const userFound = await User.findOne({ email });//busca en la base de dato por email y devuelve booleano
 
-        if (!userFound) return res.status(400).json({ message: 'usuario o contraseña incorrecto' })
+        if (!userFound) {
+            await writeSessionLog({ event: 'failed', email, ip, reason: 'Usuario inexistente' })
+            return res.status(400).json({ message: 'usuario o contraseña incorrecto' })
+        }
 
         const isMatch = await brcypt.compare(password, userFound.password)
 
-        if (!isMatch) return res.status(400).json({ message: "usuario o contraseña incorrecto" })
+        if (!isMatch) {
+            await writeSessionLog({
+                event: 'failed',
+                email: userFound.email,
+                username: userFound.username,
+                userId: userFound._id,
+                ip,
+                reason: 'Contraseña incorrecta',
+            })
+            return res.status(400).json({ message: "usuario o contraseña incorrecto" })
+        }
 
-
-
-
+        await writeSessionLog({
+            event: 'login',
+            email: userFound.email,
+            username: userFound.username,
+            userId: userFound._id,
+            ip,
+        })
 
         const token = await createAccessToken({ id: userFound._id });
         res.cookie('token', token, cookieOptions)
@@ -77,7 +97,24 @@ export const login = async (req, res) => {
         res.status(500).json({ message: error.message })
     }
 }
-export const logout = (req, res) => {
+export const logout = async (req, res) => {
+    const ip = requestIp(req)
+    const entry = { event: 'logout', ip }
+    try {
+        const token = readToken(req)
+        if (token) {
+            const payload = jwt.verify(token, process.env.TOKEN_SECRET)
+            const user = await User.findById(payload.id).select('username email')
+            if (user) {
+                entry.email = user.email
+                entry.username = user.username
+                entry.userId = user._id
+            }
+        }
+    } catch {
+        // la sesión se cierra igual si el token ya no sirve
+    }
+    await writeSessionLog(entry)
     res.cookie('token', '', {
         ...cookieOptions,
         expires: new Date(0),

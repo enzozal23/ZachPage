@@ -6,6 +6,7 @@ import { controlClass } from './ui/styles.js'
 import { assigneeFields, ticketAssignees, ticketFollowers } from '../lib/assignees.js'
 import { resolveExpediente, visibleLabels } from '../lib/persist.js'
 import { ticketTasks } from '../lib/tasks.js'
+import { confirmDialog } from '../lib/dialog.js'
 
 function buildInitialForm(ticket, initialStatus) {
   if (ticket) {
@@ -46,8 +47,11 @@ function TicketFormModal({
   onClose,
   onSave,
   onAddComment,
+  onDeleteComment,
   onAddTask,
   onToggleTask,
+  onDeleteTask,
+  onPatch,
 }) {
   const [form, setForm] = useState(() => buildInitialForm(ticket, initialStatus))
   const [error, setError] = useState(null)
@@ -98,6 +102,37 @@ function TicketFormModal({
     else setDraftTasks((prev) => prev.map((task) => (
       task.id === taskId ? { ...task, done: !task.done } : task
     )))
+  }
+
+  async function deleteTask(task) {
+    const confirmed = await confirmDialog({
+      title: '¿Eliminar la tarea?',
+      text: task.text,
+      confirmText: 'Eliminar',
+    })
+    if (!confirmed) return
+    if (ticket) onDeleteTask(ticket.id, task.id)
+    else setDraftTasks((prev) => prev.filter((item) => item.id !== task.id))
+  }
+
+  function labelList() {
+    return form.labels.split(',').map((label) => label.trim()).filter(Boolean)
+  }
+
+  function removeLabel(label) {
+    const next = labelList().filter((item) => item !== label)
+    handleChange('labels', next.join(', '))
+    if (ticket) onPatch?.({ labels: next })
+  }
+
+  async function deleteComment(item) {
+    const confirmed = await confirmDialog({
+      title: '¿Eliminar esta entrada del historial?',
+      text: item.text,
+      confirmText: 'Eliminar',
+    })
+    if (!confirmed || !ticket) return
+    onDeleteComment(ticket.id, item.id)
   }
 
   function handleComment() {
@@ -175,6 +210,22 @@ function TicketFormModal({
 
             <label className={sideLabel}>
               <span>Etiquetas</span>
+              {labelList().length > 0 && (
+                <span className="flex flex-wrap gap-1.5">
+                  {labelList().map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-full bg-sunken px-2 py-0.5 text-xs text-ink"
+                      onClick={() => removeLabel(label)}
+                      aria-label={`Quitar etiqueta ${label}`}
+                    >
+                      {label}
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  ))}
+                </span>
+              )}
               <input
                 className={controlClass}
                 type="text"
@@ -224,21 +275,33 @@ function TicketFormModal({
             </label>
 
             <details className="rounded-xl border border-line p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-muted">
-                {tasks.length === 0 ? 'Tareas' : `${tasksDone} de ${tasks.length}`}
+              <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold text-ink">
+                <span>Tareas</span>
+                <span className="text-xs font-medium text-muted">
+                  {tasks.length === 0 ? 'Ninguna' : `${tasksDone} de ${tasks.length}`}
+                </span>
               </summary>
               <ul className="mt-3 flex flex-col gap-2">
                 {tasks.map((task) => (
                   <li key={task.id}>
-                    <label className="flex items-start gap-2 text-sm">
+                    <div className="flex items-start gap-2 text-sm">
                       <input
                         type="checkbox"
                         className="mt-1"
                         checked={task.done}
+                        aria-label={`Marcar tarea ${task.text}`}
                         onChange={() => toggleTask(task.id)}
                       />
-                      <span className={task.done ? 'text-muted line-through' : 'text-muted'}>{task.text}</span>
-                    </label>
+                      <span className={`min-w-0 flex-1 ${task.done ? 'text-muted line-through' : 'text-ink'}`}>{task.text}</span>
+                      <button
+                        type="button"
+                        className="text-muted hover:text-chip-red-ink"
+                        aria-label={`Eliminar tarea ${task.text}`}
+                        onClick={() => deleteTask(task)}
+                      >
+                        ×
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -277,9 +340,19 @@ function TicketFormModal({
                     <li key={item.id} className="rounded-lg bg-sunken p-3 text-sm">
                       <div className="flex items-center justify-between gap-2 text-xs text-muted">
                         <strong className="text-muted">{item.author || 'Usuario'}</strong>
-                        <time>{formatWhen(item.createdAt)}</time>
+                        <span className="flex items-center gap-2">
+                          <time>{formatWhen(item.createdAt)}</time>
+                          <button
+                            type="button"
+                            className="text-muted hover:text-chip-red-ink"
+                            aria-label="Eliminar entrada del historial"
+                            onClick={() => deleteComment(item)}
+                          >
+                            ×
+                          </button>
+                        </span>
                       </div>
-                      <p className="mt-1 text-muted">{item.text}</p>
+                      <p className="mt-1 text-ink">{item.text}</p>
                     </li>
                   ))}
                 </ul>

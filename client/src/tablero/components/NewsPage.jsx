@@ -3,8 +3,42 @@ const RELEASES = [
     date: '1 de octubre de 2026',
     groups: [
       {
-        title: 'Corrección',
+        title: 'Clientes',
         items: [
+          'Hay una sección Clientes para crear, editar y eliminar.',
+          'Cada cliente tiene nombre, apellido, DNI o CUIT, razón social, mail, teléfono, si es persona física o jurídica, y criticidad alta, media o baja con color.',
+          'Se pueden importar desde Excel. Hay un modelo para descargar y, si el documento ya existe, ese cliente se actualiza.',
+        ],
+      },
+      {
+        title: 'Logs',
+        items: [
+          'Los logs de acciones se mejoraron. Ya no queda un update genérico de la ficha.',
+          'Cada registro dice si se agregó, se eliminó o se actualizó, y muestra el dato: etiqueta, tarea, historial, título, estado, responsable, fecha o expediente.',
+          'Monitoreo también tiene logs de mails, de sesión y de sistema.',
+        ],
+      },
+      {
+        title: 'Importaciones',
+        items: [
+          'Se puede borrar una importación. También se borran las tarjetas que salieron de ese archivo, después de confirmar.',
+          'Al importar un Word, la asignación rápida muestra el título a la izquierda y, a la derecha, responsable, fecha límite y número de expediente.',
+          'Cambiar el número de expediente actualiza el título y la línea Expediente de la descripción.',
+        ],
+      },
+      {
+        title: 'Ficha',
+        items: [
+          'El bloque de tareas se llama Tareas y cada una muestra su título.',
+          'En la ficha se puede eliminar cada tarea, cada etiqueta y cada nota del historial.',
+          'También se puede eliminar la tarjeta completa.',
+        ],
+      },
+      {
+        title: 'General',
+        items: [
+          'Las confirmaciones para eliminar usan SweetAlert en toda la aplicación.',
+          'Se sacó la tienda: productos, ventas y su acceso.',
           'El primer ingreso ya no avisa que no se pudo leer el tablero. Ahora se carga cuando la sesión está lista.',
         ],
       },

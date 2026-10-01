@@ -5,6 +5,7 @@ import { DEFAULT_COLUMN_ID, DEFAULT_PRIORITY, PENDING_COLUMN_ID, needsAssignment
 import { assigneeFields, ticketAssignees } from '../lib/assignees.js'
 import { ticketTasks } from '../lib/tasks.js'
 import { packKanban, resolveExpediente, unpackKanban } from '../lib/persist.js'
+import { ticketBelongsToImport } from '../lib/importTickets.js'
 import { normalizeFilters } from '../lib/boardFilters.js'
 
 const SELECTED_KEY = 'tablero-kanban:selectedBoardId'
@@ -404,6 +405,21 @@ export function useKanbanStore(enabled = false) {
     }))
   }, [update])
 
+  const deleteTicketTask = useCallback((id, taskId) => {
+    update((prev) => ({
+      ...prev,
+      tickets: prev.tickets.map((ticket) => (
+        ticket.id === id
+          ? {
+            ...ticket,
+            task: '',
+            tasks: ticketTasks(ticket).filter((task) => task.id !== taskId),
+          }
+          : ticket
+      )),
+    }))
+  }, [update])
+
   const toggleTicketTask = useCallback((id, taskId) => {
     update((prev) => ({
       ...prev,
@@ -445,6 +461,20 @@ export function useKanbanStore(enabled = false) {
     }))
   }, [update])
 
+  const deleteComment = useCallback((id, commentId) => {
+    update((prev) => ({
+      ...prev,
+      tickets: prev.tickets.map((ticket) => (
+        ticket.id === id
+          ? {
+            ...ticket,
+            comments: (ticket.comments || []).filter((item) => item.id !== commentId),
+          }
+          : ticket
+      )),
+    }))
+  }, [update])
+
   const saveImportedWord = useCallback((partialTickets, summary) => {
     const prev = stateRef.current
     if (!prev) return Promise.reject(new Error('El tablero todavía no cargó.'))
@@ -466,6 +496,7 @@ export function useKanbanStore(enabled = false) {
       tasks: [],
       createdAt: now,
       source: 'word',
+      importId: '',
       comments: [],
     }))
     const entry = {
@@ -478,6 +509,7 @@ export function useKanbanStore(enabled = false) {
       author: summary.author || '',
       createdAt: summary.createdAt || now,
     }
+    for (const ticket of created) ticket.importId = entry.id
     const next = {
       ...prev,
       tickets: [...(prev.tickets || []), ...created],
@@ -510,6 +542,20 @@ export function useKanbanStore(enabled = false) {
     })
   }, [])
 
+  const deleteImport = useCallback((importId) => {
+    const prev = stateRef.current
+    const item = (prev?.imports || []).find((entry) => entry.id === importId)
+    if (!item) return []
+    const removed = (prev.tickets || []).filter((ticket) => ticketBelongsToImport(ticket, item)).map((ticket) => ticket.id)
+    const removedIds = new Set(removed)
+    update((state) => ({
+      ...state,
+      imports: (state.imports || []).filter((entry) => entry.id !== importId),
+      tickets: (state.tickets || []).filter((ticket) => !removedIds.has(ticket.id)),
+    }))
+    return removed
+  }, [update])
+
   const resetAll = useCallback(() => {
     clearStorage()
     const next = createDefaultState()
@@ -534,8 +580,12 @@ export function useKanbanStore(enabled = false) {
     importTickets,
     addTicketTask,
     toggleTicketTask,
+    deleteTicketTask,
     addComment,
+    deleteComment,
     saveImportedWord,
+    deleteImport,
+    allTickets: state?.tickets || [],
     imports: state?.imports || [],
     resetAll,
   }
