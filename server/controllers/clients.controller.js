@@ -2,6 +2,7 @@ import Client from '../models/client.model.js'
 import ClientField from '../models/clientField.model.js'
 import User from '../models/user.models.js'
 import { requestIp, writeActivities } from '../libs/activityLog.js'
+import { botonesDe } from '../libs/permisos.js'
 
 const TIPOS = new Set(['fisica', 'juridica'])
 const CRITICIDAD = new Set(['alta', 'media', 'baja'])
@@ -220,9 +221,12 @@ export const logClientsExport = async (req, res) => {
   res.json({ ok: true })
 }
 
-export const listClients = async (_req, res) => {
+export const listClients = async (req, res) => {
   const docs = await Client.find().sort({ razonSocial: 1, apellido: 1, nombre: 1 }).limit(5000)
-  res.json(docs.map(publicClient))
+  res.json({
+    clients: docs.map(publicClient),
+    botones: await botonesDe(req.user?.role, 'clientes'),
+  })
 }
 
 const FIELD_TYPES = new Set(['texto', 'numero', 'fecha', 'checkbox', 'selector'])

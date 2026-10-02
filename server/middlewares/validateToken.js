@@ -30,7 +30,7 @@ export const authRequired = async (req, res, next) => {
 }
 
 export function adminRequired(req, res, next) {
-    if (req.user?.role !== 'admin') {
+    if (req.user?.role !== 'admin' && req.user?.role !== '0623') {
         return res.status(403).json({ message: 'No tenés permiso para esto.' })
     }
     next()

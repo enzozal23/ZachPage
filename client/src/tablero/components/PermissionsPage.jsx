@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { listPermisosRequest, savePermisosRequest } from '../../api/permisos.js'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { usePermiso } from '../lib/permisos.js'
+import { boton } from '../lib/botones.js'
 import { Button } from './ui/Button.jsx'
 
 function readError(error, fallback) {
@@ -11,7 +11,8 @@ function readError(error, fallback) {
 
 function PermissionsPage() {
   const { user, refreshProfile } = useAuth()
-  const puedeEditar = usePermiso('permisos.editar')
+  const [botones, setBotones] = useState([])
+  const editar = boton(botones, 'editar')
   const [permisos, setPermisos] = useState([])
   const [roles, setRoles] = useState([])
   const [asignados, setAsignados] = useState({})
@@ -25,12 +26,13 @@ function PermissionsPage() {
         setPermisos(Array.isArray(res.data?.permisos) ? res.data.permisos : [])
         setRoles(Array.isArray(res.data?.roles) ? res.data.roles : [])
         setAsignados(res.data?.asignados || {})
+        setBotones(Array.isArray(res.data?.botones) ? res.data.botones : [])
       })
       .catch((err) => setError(readError(err, 'No se pudieron cargar los permisos.')))
   }, [])
 
   function toggle(rol, permiso) {
-    if (!puedeEditar) return
+    if (!editar) return
     if (rol === 'admin' && (permiso === 'permisos.ver' || permiso === 'permisos.editar')) return
     setAsignados((current) => {
       const lista = new Set(current[rol] || [])
@@ -55,6 +57,7 @@ function PermissionsPage() {
         setPermisos(last.permisos || [])
         setRoles(last.roles || [])
         setAsignados(last.asignados || {})
+        setBotones(Array.isArray(last.botones) ? last.botones : [])
       }
       if (user?.role) await refreshProfile()
       setNotice('Permisos guardados.')
@@ -79,7 +82,7 @@ function PermissionsPage() {
           <h2 className="text-xl font-semibold text-ink">Permisos</h2>
           <p className="mt-1 text-sm text-muted">Cada acción de Lexora consulta si el rol tiene el permiso.</p>
         </div>
-        {puedeEditar && <Button onClick={handleSave} disabled={saving || roles.length === 0}>{saving ? 'Guardando…' : 'Guardar'}</Button>}
+        {editar && <Button onClick={handleSave} disabled={saving || roles.length === 0}>{saving ? 'Guardando…' : editar.nombre}</Button>}
       </div>
       {error && <p className="rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{error}</p>}
       {notice && <p className="rounded-lg bg-chip-emerald px-3 py-2 text-sm text-chip-emerald-ink" role="status">{notice}</p>}
@@ -110,7 +113,7 @@ function PermissionsPage() {
                           <input
                             type="checkbox"
                             checked={activo}
-                            disabled={!puedeEditar || bloqueado}
+                            disabled={!editar || bloqueado}
                             aria-label={`${permiso.nombre} para ${rol.nombre}`}
                             onChange={() => toggle(rol.id, permiso.id)}
                           />

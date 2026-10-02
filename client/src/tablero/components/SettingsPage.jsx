@@ -1,7 +1,8 @@
-import { useEffect, useId, useState } from 'react'
-import { getSettingsRequest, saveSettingsRequest } from '../../api/settings.js'
+import { useEffect, useId, useRef, useState } from 'react'
+import { downloadBackupRequest, getSettingsRequest, importBackupRequest, saveSettingsRequest } from '../../api/settings.js'
 import { Button } from './ui/Button.jsx'
-import { usePermiso } from '../lib/permisos.js'
+import { boton } from '../lib/botones.js'
+import { confirmDialog } from '../lib/dialog.js'
 import { controlClass } from './ui/styles.js'
 import {
   DEFAULT_DAYS_BEFORE,
@@ -16,6 +17,7 @@ import {
 
 const SECTIONS = [
   { id: 'due-reminders', title: 'Avisos de vencimiento' },
+  { id: 'backup', title: 'Backup' },
 ]
 
 function ruleKey(status, priority) {
@@ -196,7 +198,14 @@ function RuleModal({ onClose, onAdd, existingKeys }) {
 }
 
 function SettingsPage() {
-  const puedeEditar = usePermiso('configuraciones.editar')
+  const [botones, setBotones] = useState([])
+  const editar = boton(botones, 'editar')
+  const agregar = boton(botones, 'agregar')
+  const quitar = boton(botones, 'quitar')
+  const generarBackup = boton(botones, 'backup')
+  const importarBackup = boton(botones, 'importar-backup')
+  const backupInputRef = useRef(null)
+  const [backupBusy, setBackupBusy] = useState(false)
   const [openSection, setOpenSection] = useState('due-reminders')
   const [rules, setRules] = useState([])
   const [mailEnabled, setMailEnabled] = useState(true)
@@ -215,6 +224,7 @@ function SettingsPage() {
         const res = await getSettingsRequest()
         if (cancelled) return
         const settings = publicSettings(res.data)
+        setBotones(Array.isArray(res.data?.botones) ? res.data.botones : [])
         setRules(settings.dueReminders)
         setMailEnabled(settings.mailNotificationsEnabled)
       } catch (err) {
@@ -249,8 +259,64 @@ function SettingsPage() {
     )
   }
 
+  async function handleBackup() {
+    setBackupBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const res = await downloadBackupRequest()
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const day = new Date().toISOString().slice(0, 10)
+      link.href = url
+      link.download = `lexora-backup-${day}.json`
+      link.click()
+      URL.revokeObjectURL(url)
+      setNotice('Backup generado.')
+    } catch (err) {
+      let message = err.response?.data?.message
+      if (err.response?.data instanceof Blob) {
+        try {
+          const parsed = JSON.parse(await err.response.data.text())
+          message = parsed.message
+        } catch {
+          message = ''
+        }
+      }
+      setError(typeof message === 'string' && message.trim() ? message : 'No se pudo generar el backup.')
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
+  async function handleImportFile(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    const confirmed = await confirmDialog({
+      title: '¿Importar el backup?',
+      text: 'Esto reemplaza el tablero, los clientes, los usuarios, los permisos y los registros por los del archivo.',
+      confirmText: 'Importar',
+    })
+    if (!confirmed) return
+    setBackupBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const data = JSON.parse(await file.text())
+      await importBackupRequest(data)
+      window.location.reload()
+    } catch (err) {
+      const message = err.response?.data?.message
+      setError(typeof message === 'string' && message.trim() ? message : 'No se pudo importar el backup.')
+      setBackupBusy(false)
+    }
+  }
+
   async function handleSave(event) {
     event.preventDefault()
+    if (!editar) return
     setSaving(true)
     setError(null)
     setNotice(null)
@@ -284,6 +350,7 @@ function SettingsPage() {
       {!loading && (
         <div className="flex flex-col gap-3">
           {SECTIONS.map((section) => {
+            if (section.id === 'backup' && !generarBackup && !importarBackup) return null
             const isOpen = openSection === section.id
             return (
               <div key={section.id} className="overflow-hidden rounded-2xl border border-line bg-surface">
@@ -314,6 +381,7 @@ function SettingsPage() {
                           role="switch"
                           className="peer sr-only"
                           checked={mailEnabled}
+                          disabled={!editar}
                           onChange={(event) => setMailEnabled(event.target.checked)}
                           aria-label="Activar notificaciones por mail"
                         />
@@ -328,7 +396,7 @@ function SettingsPage() {
                       prioridad configuradas (0 = solo el día de vencimiento).
                     </p>
 
-                    <div>
+                    {agregar && <div>
                       <Button
                         onClick={() => setModalOpen(true)}
                         disabled={!hasAvailableCombos}
@@ -338,9 +406,9 @@ function SettingsPage() {
                             : 'Ya hay una configuración para todas las combinaciones'
                         }
                       >
-                        Agregar configuración
+                        {agregar.nombre}
                       </Button>
-                    </div>
+                    </div>}
 
                     {rules.length === 0 ? (
                       <p className="text-sm text-muted">Todavía no hay configuraciones.</p>
@@ -387,13 +455,13 @@ function SettingsPage() {
                                     {rule.daysBefore} {rule.daysBefore === 1 ? 'día' : 'días'}
                                   </td>
                                   <td className="px-2 py-2">
-                                    <Button
+                                    {quitar && <Button
                                       variant="secondary"
                                       size="sm"
                                       onClick={() => removeRule(rule.status, rule.priority)}
                                     >
-                                      Quitar
-                                    </Button>
+                                      {quitar.nombre}
+                                    </Button>}
                                   </td>
                                 </tr>
                               )
@@ -403,12 +471,32 @@ function SettingsPage() {
                       </div>
                     )}
 
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={saving || !puedeEditar}>
-                        {saving ? 'Guardando…' : 'Guardar'}
+                    {editar && <div className="flex justify-end">
+                      <Button type="submit" disabled={saving}>
+                        {saving ? 'Guardando…' : editar.nombre}
                       </Button>
-                    </div>
+                    </div>}
                   </form>
+                )}
+                {isOpen && section.id === 'backup' && (
+                  <div className="flex flex-col gap-4 border-t border-line px-5 py-4">
+                    <p className="text-sm text-muted">
+                      El archivo incluye el tablero, los clientes, los campos, los usuarios, los permisos y los registros.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {generarBackup && (
+                        <Button onClick={handleBackup} disabled={backupBusy}>
+                          {backupBusy ? 'Trabajando…' : generarBackup.nombre}
+                        </Button>
+                      )}
+                      {importarBackup && (
+                        <Button variant="secondary" onClick={() => backupInputRef.current?.click()} disabled={backupBusy}>
+                          {importarBackup.nombre}
+                        </Button>
+                      )}
+                      <input ref={backupInputRef} type="file" accept="application/json,.json" hidden onChange={handleImportFile} />
+                    </div>
+                  </div>
                 )}
               </div>
             )

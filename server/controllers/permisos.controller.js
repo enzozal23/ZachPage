@@ -1,5 +1,5 @@
 import User from '../models/user.models.js'
-import { PERMISOS, guardarPermisos, permisosDe } from '../libs/permisos.js'
+import { PERMISOS, botonesDe, guardarPermisos, permisosDe } from '../libs/permisos.js'
 import { requestIp, writeActivities } from '../libs/activityLog.js'
 
 const ROLES = [
@@ -7,10 +7,15 @@ const ROLES = [
   { id: 'user', nombre: 'Usuario' },
 ]
 
-export const listPermisos = async (_req, res) => {
+export const listPermisos = async (req, res) => {
   const asignados = {}
   for (const rol of ROLES) asignados[rol.id] = await permisosDe(rol.id)
-  res.json({ permisos: PERMISOS, roles: ROLES, asignados })
+  res.json({
+    permisos: PERMISOS,
+    roles: ROLES,
+    asignados,
+    botones: await botonesDe(req.user?.role, 'permisos'),
+  })
 }
 
 export const savePermisos = async (req, res) => {
@@ -36,5 +41,10 @@ export const savePermisos = async (req, res) => {
   }])
   const asignados = {}
   for (const item of ROLES) asignados[item.id] = await permisosDe(item.id)
-  res.json({ permisos: PERMISOS, roles: ROLES, asignados })
+  res.json({
+    permisos: PERMISOS,
+    roles: ROLES,
+    asignados,
+    botones: await botonesDe(req.user?.role, 'permisos'),
+  })
 }

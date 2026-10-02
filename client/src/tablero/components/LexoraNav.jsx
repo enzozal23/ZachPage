@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import inicioIcon from '../../images/inicio.png'
-import { usePermiso } from '../lib/permisos.js'
+import { boton } from '../lib/botones.js'
 
 function linkClass(active) {
   return `rounded-lg px-3 py-1.5 text-sm font-medium transition ${
@@ -28,15 +28,20 @@ function LexoraNav({
   const onNews = pathname === '/novedades'
   const displayName = user?.username || user?.email || ''
   const isDark = theme === 'dark'
-  const verTablero = usePermiso('tablero.ver')
-  const verClientes = usePermiso('clientes.ver')
-  const verImportaciones = usePermiso('importaciones.ver')
-  const verMonitoreo = usePermiso('monitoreo.ver')
-  const verConfig = usePermiso('configuraciones.ver')
-  const verLogs = usePermiso('logs.ver')
-  const verNovedades = usePermiso('novedades.ver')
-  const verUsuarios = usePermiso('usuarios.ver')
-  const verPermisos = usePermiso('permisos.ver')
+  const menu = (user?.botones || []).filter((item) => item.id !== 'usuarios')
+  const usuarios = boton(user?.botones, 'usuarios')
+
+  function isCurrent(item) {
+    if (item.id === 'tablero') return onBoard
+    if (item.id === 'importaciones') return onImports
+    if (item.id === 'monitoreo') return onMonitor
+    if (item.id === 'configuraciones') return onSettings
+    if (item.id === 'logs') return onLogs
+    if (item.id === 'novedades') return onNews
+    if (item.id === 'clientes') return onClients
+    if (item.id === 'permisos') return pathname === '/permisos'
+    return pathname === item.to
+  }
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-5 py-3">
@@ -47,42 +52,14 @@ function LexoraNav({
         </Link>
 
         <nav className="flex flex-wrap items-center gap-1" aria-label="Secciones">
-          {verTablero && <Link to="/" className={linkClass(onBoard)} aria-current={onBoard ? 'page' : undefined}>
-            Tablero
-          </Link>}
-          {verClientes && <Link to="/clientes" className={linkClass(onClients)} aria-current={onClients ? 'page' : undefined}>
-            Clientes
-          </Link>}
-          {verImportaciones && <Link
-            to="/importaciones"
-            className={linkClass(onImports)}
-            aria-current={onImports ? 'page' : undefined}
-          >
-            Importaciones
-          </Link>}
-          {verMonitoreo && <Link
-            to="/monitoreo"
-            className={linkClass(onMonitor)}
-            aria-current={onMonitor ? 'page' : undefined}
-          >
-            Monitoreo
-          </Link>}
-          {verConfig && <Link
-            to="/configuraciones"
-            className={linkClass(onSettings)}
-            aria-current={onSettings ? 'page' : undefined}
-          >
-            Configuraciones
-          </Link>}
-          {verLogs && <Link to="/monitoreo/sistema" className={linkClass(onLogs)} aria-current={onLogs ? 'page' : undefined}>
-            Logs
-          </Link>}
-          {verNovedades && <Link to="/novedades" className={linkClass(onNews)} aria-current={onNews ? 'page' : undefined}>
-            Novedades
-          </Link>}
-          {verPermisos && <Link to="/permisos" className={linkClass(pathname === '/permisos')} aria-current={pathname === '/permisos' ? 'page' : undefined}>
-            Permisos
-          </Link>}
+          {menu.map((item) => {
+            const current = isCurrent(item)
+            return (
+              <Link key={item.id} to={item.to} className={linkClass(current)} aria-current={current ? 'page' : undefined}>
+                {item.nombre}
+              </Link>
+            )
+          })}
         </nav>
       </div>
 
@@ -110,8 +87,8 @@ function LexoraNav({
           </span>
         </button>
 
-        {verUsuarios && <Link
-          to="/usuarios"
+        {usuarios && <Link
+          to={usuarios.to}
           className={`flex h-9 w-9 items-center justify-center rounded-full border transition ${
             onUsers
               ? 'border-transparent bg-indigo-600 text-white'

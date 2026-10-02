@@ -7,6 +7,7 @@ import logsRoutes from './routes/logs.routes.js'
 import activityRoutes from './routes/activity.routes.js'
 import clientsRoutes from './routes/clients.routes.js'
 import permisosRoutes from './routes/permisos.routes.js'
+import backupRoutes from './routes/backup.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -43,6 +44,7 @@ app.use(cors({
 }));
 app.use(morgan('dev'))//ver las peticiones
 app.set('trust proxy', 1)
+app.use('/api/backup', express.json({ limit: '50mb' }))
 app.use(express.json({ limit: '2mb' }))
 app.use(cookieParser())//
 app.use('/api', appRequestRequired)
@@ -52,6 +54,7 @@ app.use('/api', logsRoutes)
 app.use('/api', activityRoutes)
 app.use('/api', clientsRoutes)
 app.use('/api', permisosRoutes)
+app.use('/api', backupRoutes)
 
 app.get('/', (_req, res) => {
     res.redirect('https://zachpage-frontend.onrender.com/')

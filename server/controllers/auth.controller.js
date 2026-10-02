@@ -7,7 +7,7 @@ import dotenv from 'dotenv'
 import { readToken } from '../middlewares/validateToken.js';
 import { requestIp } from '../libs/activityLog.js';
 import { writeSessionLog } from '../libs/sessionLog.js';
-import { permisosDe } from '../libs/permisos.js';
+import { botonesDe, permisosDe } from '../libs/permisos.js';
 
 function cookieOptions() {
     const production = Boolean(process.env.RENDER) || process.env.NODE_ENV === 'production'
@@ -33,6 +33,15 @@ function publicSession(user) {
         role: user.role || 'user',
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+    }
+}
+
+async function sessionPayload(user) {
+    const role = user.role || 'user'
+    return {
+        ...publicSession(user),
+        permisos: await permisosDe(role),
+        botones: await botonesDe(role, 'nav'),
     }
 }
 
@@ -75,7 +84,7 @@ export const login = async (req, res) => {
 
         const token = await createAccessToken({ id: userFound._id, tv: Number(userFound.tokenVersion || 0) });
         res.cookie('token', token, cookieOptions())
-        res.json({ ...publicSession(userFound), permisos: await permisosDe(userFound.role || 'user') })
+        res.json(await sessionPayload(userFound))
     } catch (error) {
         fail(res, error)
     }
@@ -107,7 +116,7 @@ export const profile = async (req, res) => {
 
     const userFound = await User.findById(req.user.id)
     if (!userFound) return res.status(400).json({ message: 'usuario no encontrado' })
-    return res.json({ ...publicSession(userFound), permisos: await permisosDe(userFound.role || 'user') })
+    return res.json(await sessionPayload(userFound))
 }
 
 function publicUser(user) {
@@ -180,7 +189,10 @@ async function renameMentions(previous, next) {
 export const listAllUsers = async (req, res) => {
     try {
         const users = await User.find().select('username email role createdAt updatedAt').sort({ username: 1, email: 1 })
-        res.json(users.map(publicUser))
+        res.json({
+            users: users.map(publicUser),
+            botones: await botonesDe(req.user?.role, 'usuarios'),
+        })
     } catch (error) {
         fail(res, error)
     }
@@ -192,7 +204,7 @@ export const createUser = async (req, res) => {
     try {
         if (await emailTaken(email)) return res.status(400).json({ message: 'Ese mail ya está en uso.' })
         const passwordHash = await brcypt.hash(req.body.password, 10)
-        const role = req.body.role === 'admin' ? 'admin' : 'user'
+        const role = req.body.role === 'admin' || req.body.role === '0623' ? req.body.role : 'user'
         const user = await User.create({ username, email, password: passwordHash, role, tokenVersion: 0 })
         res.status(201).json(publicUser(user))
     } catch (error) {
@@ -219,7 +231,7 @@ export const updateUser = async (req, res) => {
             user.password = await brcypt.hash(password, 10)
             user.tokenVersion = Number(user.tokenVersion || 0) + 1
         }
-        if (req.body.role === 'admin' || req.body.role === 'user') {
+        if (req.body.role === 'admin' || req.body.role === 'user' || req.body.role === '0623') {
             if (req.body.role === 'user' && user.role === 'admin') {
                 const others = await User.countDocuments({ role: 'admin', _id: { $ne: user._id } })
                 if (!others) return res.status(400).json({ message: 'Tiene que quedar al menos un administrador.' })
@@ -294,7 +306,7 @@ export const verifyToken = async (req, res) => {
             return res.status(401).json({ message: 'No autorizado.' })
         }
         res.cookie('token', token, cookieOptions())
-        return res.json({ ...publicSession(userFound), permisos: await permisosDe(userFound.role || 'user') })
+        return res.json(await sessionPayload(userFound))
     } catch {
         return res.status(401).json({ message: 'No autorizado.' })
     }

@@ -8,7 +8,7 @@ import {
 } from '../../api/clients.js'
 import { confirmDialog } from '../lib/dialog.js'
 import { Button } from './ui/Button.jsx'
-import { usePermiso } from '../lib/permisos.js'
+import { boton } from '../lib/botones.js'
 import { Field } from './ui/Field.jsx'
 import { controlClass } from './ui/styles.js'
 
@@ -70,8 +70,11 @@ function OptionEditor({ options, locked, onChange }) {
   )
 }
 
-function ClientFieldsModal({ onClose, onChange }) {
-  const puedeMigrar = usePermiso('clientes.migrar')
+function ClientFieldsModal({ onClose, onChange, botones = [] }) {
+  const migrar = boton(botones, 'migrar')
+  const crearCampo = boton(botones, 'campo-crear')
+  const editarCampo = boton(botones, 'campo-editar')
+  const eliminarCampo = boton(botones, 'campo-eliminar')
   const titleId = useId()
   const [fields, setFields] = useState([])
   const [editor, setEditor] = useState(null)
@@ -196,8 +199,8 @@ function ClientFieldsModal({ onClose, onChange }) {
         <header className="mb-4 flex items-center justify-between gap-3">
           <h3 id={titleId} className="text-lg font-semibold text-ink">Campos configurables</h3>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleMigrate} disabled={saving || !ready || !pendingMigration || !puedeMigrar} title={!puedeMigrar ? 'No tenés permiso para migrar' : pendingMigration ? undefined : 'Los campos actuales ya están migrados'}>Migrar campos actuales</Button>
-            <Button onClick={openCreate}>Nuevo campo</Button>
+            {migrar && <Button variant="secondary" onClick={handleMigrate} disabled={saving || !ready || !pendingMigration} title={pendingMigration ? undefined : 'Los campos actuales ya están migrados'}>{migrar.nombre}</Button>}
+            {crearCampo && <Button onClick={openCreate}>{crearCampo.nombre}</Button>}
             <Button variant="secondary" onClick={onClose}>Cerrar</Button>
           </div>
         </header>
@@ -232,8 +235,8 @@ function ClientFieldsModal({ onClose, onChange }) {
                   <td className="px-3 py-2 text-muted">{field.requerido ? 'Sí' : 'No'}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => openEdit(field)}>Editar</Button>
-                      <Button variant="danger" size="sm" onClick={() => handleDelete(field)}>Eliminar</Button>
+                      {editarCampo && <Button variant="secondary" size="sm" onClick={() => openEdit(field)}>{editarCampo.nombre}</Button>}
+                      {eliminarCampo && <Button variant="danger" size="sm" onClick={() => handleDelete(field)}>{eliminarCampo.nombre}</Button>}
                     </div>
                   </td>
                 </tr>

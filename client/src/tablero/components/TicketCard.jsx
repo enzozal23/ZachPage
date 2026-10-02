@@ -4,7 +4,6 @@ import { ticketAssignees, ticketFollowers } from '../lib/assignees.js'
 import { resolveExpediente, visibleLabels } from '../lib/persist.js'
 import { dueTone } from '../lib/dueTone.js'
 import { Button } from './ui/Button.jsx'
-import { usePermiso } from '../lib/permisos.js'
 import { confirmDialog } from '../lib/dialog.js'
 
 const PRIORITY_BADGE = {
@@ -50,11 +49,10 @@ function formatDue(value) {
   return `${match[3]}/${match[2]}/${match[1]}`
 }
 
-function TicketCard({ ticket, onEdit, onDelete }) {
+function TicketCard({ ticket, onEdit, onDelete, mail }) {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState(null)
   const [dragging, setDragging] = useState(false)
-  const puedeMail = usePermiso('configuraciones.editar')
   const skipClick = useRef(false)
   const comments = ticket.comments?.length || 0
   const facts = readCaseFacts(ticket.description)
@@ -189,8 +187,8 @@ function TicketCard({ ticket, onEdit, onDelete }) {
 
       <div className="flex items-center justify-between gap-2 text-xs text-muted">
         <span>{historyLabel}</span>
-        {puedeMail && <Button variant="secondary" size="sm" onClick={handleTestMail} disabled={busy}>
-          {busy ? 'Enviando…' : 'Probar mail'}
+        {mail && <Button variant="secondary" size="sm" onClick={handleTestMail} disabled={busy}>
+          {busy ? 'Enviando…' : mail.nombre}
         </Button>}
       </div>
       {notice && <p className="text-xs text-muted">{notice}</p>}

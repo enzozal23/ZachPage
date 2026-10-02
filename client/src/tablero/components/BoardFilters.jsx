@@ -10,6 +10,7 @@ function BoardFilters({
   options,
   onClear,
   onSave,
+  saveLabel,
   saveNotice,
 }) {
   const activeCount = countActiveFilters(filters)
@@ -37,7 +38,7 @@ function BoardFilters({
             Limpiar
           </Button>
         )}
-        <Button onClick={onSave}>Guardar configuración</Button>
+        {onSave && <Button onClick={onSave}>{saveLabel || 'Guardar configuración'}</Button>}
         {saveNotice && <span className="text-sm text-chip-emerald-ink">{saveNotice}</span>}
       </div>
 

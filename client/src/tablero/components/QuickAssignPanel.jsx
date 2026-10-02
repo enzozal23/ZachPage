@@ -52,7 +52,8 @@ function useAllUsers() {
     let cancelled = false
     listAllUsersRequest()
       .then((res) => {
-        if (!cancelled) setUsers(Array.isArray(res.data) ? res.data : [])
+        const list = Array.isArray(res.data) ? res.data : res.data?.users
+        if (!cancelled) setUsers(Array.isArray(list) ? list : [])
       })
       .catch(() => {
         if (!cancelled) setUsers([])

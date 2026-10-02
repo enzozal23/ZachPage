@@ -113,8 +113,17 @@ function mergeStored(remote, stored) {
   }
 }
 
+function readBotones(data) {
+  const value = data?.botones
+  return {
+    tablero: Array.isArray(value?.tablero) ? value.tablero : [],
+    importaciones: Array.isArray(value?.importaciones) ? value.importaciones : [],
+  }
+}
+
 export function useKanbanStore(enabled = false) {
   const [state, setState] = useState(null)
+  const [botones, setBotones] = useState({ tablero: [], importaciones: [] })
   const [ready, setReady] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const dirty = useRef(false)
@@ -130,6 +139,7 @@ export function useKanbanStore(enabled = false) {
       const stored = loadStoredState()
       try {
         const res = await getKanbanRequest()
+        if (!cancelled) setBotones(readBotones(res.data))
         let remote = unpackKanban(res.data)
         let mustSave = false
 
@@ -179,6 +189,7 @@ export function useKanbanStore(enabled = false) {
           try {
             const saved = await saveKanbanRequest(packKanban(remote))
             if (cancelled) return
+            setBotones(readBotones(saved.data))
             const next = unpackKanban(saved.data)
             next.tickets = mergeLocalTicketFields(remote.tickets, next.tickets)
             if (next.tickets.length < sent) {
@@ -228,6 +239,7 @@ export function useKanbanStore(enabled = false) {
       saveKanbanRequest(packKanban(snapshot))
         .then((res) => {
           if (revision.current !== revisionAtSave) return
+          setBotones(readBotones(res.data))
           const next = unpackKanban(res.data)
           next.tickets = mergeLocalTicketFields(snapshot.tickets, next.tickets)
           if ((next.tickets || []).length < (snapshot.tickets || []).length) {
@@ -526,6 +538,7 @@ export function useKanbanStore(enabled = false) {
     stateRef.current = next
     setState(next)
     return saveKanbanRequest(packKanban(next)).then((res) => {
+      setBotones(readBotones(res.data))
       const unpacked = unpackKanban(res.data)
       unpacked.tickets = mergeLocalTicketFields(next.tickets, unpacked.tickets)
       if (revision.current !== revisionAtSave) return { entry, created }
@@ -569,6 +582,7 @@ export function useKanbanStore(enabled = false) {
   return {
     ready,
     saveError,
+    botones,
     boards: state?.boards || [],
     tickets,
     selectedBoardId,

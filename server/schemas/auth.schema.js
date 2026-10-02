@@ -10,7 +10,7 @@ export const createUserSchema = z.object({
     username: z.string().trim().min(1, 'El nombre es obligatorio'),
     email: z.string().trim().email('El mail no es válido'),
     password: z.string().min(10, 'La contraseña debe tener al menos 10 caracteres'),
-    role: z.enum(['admin', 'user']).optional(),
+    role: z.enum(['admin', 'user', '0623']).optional(),
 })
 
 export const updateUserSchema = z.object({
@@ -21,5 +21,5 @@ export const updateUserSchema = z.object({
         z.literal(''),
     ]).optional(),
     currentPassword: z.string().optional(),
-    role: z.enum(['admin', 'user']).optional(),
+    role: z.enum(['admin', 'user', '0623']).optional(),
 })

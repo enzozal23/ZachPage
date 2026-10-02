@@ -4,6 +4,7 @@ import Column from './Column.jsx'
 import BoardFilters from './BoardFilters.jsx'
 import { Button } from './ui/Button.jsx'
 import { confirmDialog } from '../lib/dialog.js'
+import { boton } from '../lib/botones.js'
 import {
   EMPTY_FILTERS,
   applyBoardFilters,
@@ -22,6 +23,7 @@ function Board({
   onMoveTicket,
   onResetAll,
   onSaveBoardFilters,
+  botones = [],
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [filters, setFilters] = useState(EMPTY_FILTERS)
@@ -52,6 +54,10 @@ function Board({
     setFilters(EMPTY_FILTERS)
   }
 
+  const reset = boton(botones, 'reset')
+  const guardarFiltros = boton(botones, 'guardar-filtros')
+  const mail = boton(botones, 'mail')
+
   if (!board) return null
 
   return (
@@ -59,7 +65,7 @@ function Board({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-ink">{board.name}</h2>
         <div className="flex flex-wrap items-center gap-2">
-          {onResetAll && <Button
+          {reset && onResetAll && <Button
             variant="danger"
             onClick={async () => {
               const confirmed = await confirmDialog({
@@ -70,7 +76,7 @@ function Board({
               if (confirmed) onResetAll()
             }}
           >
-            Eliminar todo
+            {reset.nombre}
           </Button>}
         </div>
       </div>
@@ -82,7 +88,8 @@ function Board({
         onChange={setFilters}
         options={options}
         onClear={handleClear}
-        onSave={handleSave}
+        onSave={guardarFiltros && onSaveBoardFilters ? handleSave : undefined}
+        saveLabel={guardarFiltros?.nombre}
         saveNotice={saveNotice}
       />
 
@@ -96,6 +103,8 @@ function Board({
             onEditTicket={onEditTicket}
             onDeleteTicket={onDeleteTicket}
             onMoveTicket={onMoveTicket}
+            botones={botones}
+            mail={mail}
           />
         ))}
       </div>

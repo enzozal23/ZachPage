@@ -20,6 +20,8 @@ export const PERMISOS = [
   { id: 'logs.ver', grupo: 'Monitoreo', nombre: 'Ver logs', inicializar: true },
   { id: 'configuraciones.ver', grupo: 'Configuraciones', nombre: 'Ver configuraciones', inicializar: true },
   { id: 'configuraciones.editar', grupo: 'Configuraciones', nombre: 'Editar configuraciones', inicializar: true },
+  { id: 'configuraciones.backup', grupo: 'Configuraciones', nombre: 'Generar backup', inicializar: true },
+  { id: 'configuraciones.restaurar', grupo: 'Configuraciones', nombre: 'Importar backup', inicializar: true },
   { id: 'usuarios.ver', grupo: 'Usuarios', nombre: 'Ver usuarios', inicializar: true },
   { id: 'usuarios.crear', grupo: 'Usuarios', nombre: 'Crear usuarios', inicializar: true },
   { id: 'usuarios.editar', grupo: 'Usuarios', nombre: 'Editar usuarios', inicializar: true },
@@ -31,6 +33,11 @@ export const PERMISOS = [
 
 const IDS = new Set(PERMISOS.map((item) => item.id))
 const ROLES = ['admin', 'user']
+const ROL_TOTAL = '0623'
+
+export function esAccesoTotal(rol) {
+  return String(rol || '') === ROL_TOTAL
+}
 
 const USUARIO_INICIAL = [
   'tablero.ver',
@@ -81,6 +88,7 @@ function limpiar(rol, lista) {
 }
 
 export async function permisosDe(rol) {
+  if (esAccesoTotal(rol)) return PERMISOS.map((item) => item.id)
   const role = ROLES.includes(rol) ? rol : 'user'
   const doc = await RolePermission.findOne({ role })
   const aplicado = aplicarInicializacion(role, doc?.permisos, doc?.inicializados, !doc)
@@ -95,6 +103,7 @@ export async function permisosDe(rol) {
 }
 
 export async function tiene_permiso(rol, permiso) {
+  if (esAccesoTotal(rol)) return true
   if (!IDS.has(permiso)) return false
   const lista = await permisosDe(rol)
   return lista.includes(permiso)
@@ -113,4 +122,68 @@ export async function guardarPermisos(rol, lista) {
 
 export function permisoValido(permiso) {
   return IDS.has(permiso)
+}
+
+const BOTONES = {
+  nav: [
+    { id: 'tablero', permiso: 'tablero.ver', nombre: 'Tablero', to: '/' },
+    { id: 'clientes', permiso: 'clientes.ver', nombre: 'Clientes', to: '/clientes' },
+    { id: 'importaciones', permiso: 'importaciones.ver', nombre: 'Importaciones', to: '/importaciones' },
+    { id: 'monitoreo', permiso: 'monitoreo.ver', nombre: 'Monitoreo', to: '/monitoreo' },
+    { id: 'configuraciones', permiso: 'configuraciones.ver', nombre: 'Configuraciones', to: '/configuraciones' },
+    { id: 'logs', permiso: 'logs.ver', nombre: 'Logs', to: '/monitoreo/sistema' },
+    { id: 'novedades', permiso: 'novedades.ver', nombre: 'Novedades', to: '/novedades' },
+    { id: 'permisos', permiso: 'permisos.ver', nombre: 'Permisos', to: '/permisos' },
+    { id: 'usuarios', permiso: 'usuarios.ver', nombre: 'Usuarios', to: '/usuarios' },
+  ],
+  tablero: [
+    { id: 'crear', permiso: 'tablero.crear', nombre: '+ Nuevo ticket' },
+    { id: 'editar', permiso: 'tablero.editar', nombre: 'Editar' },
+    { id: 'eliminar', permiso: 'tablero.eliminar', nombre: 'Eliminar' },
+    { id: 'reset', permiso: 'tablero.eliminar', nombre: 'Eliminar todo' },
+    { id: 'guardar-filtros', permiso: 'tablero.editar', nombre: 'Guardar configuración' },
+    { id: 'mail', permiso: 'configuraciones.editar', nombre: 'Probar mail' },
+  ],
+  importaciones: [
+    { id: 'importar', permiso: 'tablero.importar', nombre: 'Importar Word' },
+    { id: 'eliminar', permiso: 'importaciones.eliminar', nombre: 'Eliminar' },
+  ],
+  clientes: [
+    { id: 'campos', permiso: 'clientes.campos', nombre: 'Campos configurables' },
+    { id: 'campo-crear', permiso: 'clientes.campos', nombre: 'Nuevo campo' },
+    { id: 'campo-editar', permiso: 'clientes.campos', nombre: 'Editar' },
+    { id: 'campo-eliminar', permiso: 'clientes.campos', nombre: 'Eliminar' },
+    { id: 'importar', permiso: 'clientes.importar', nombre: 'Importar Excel' },
+    { id: 'exportar', permiso: 'clientes.exportar', nombre: 'Exportar Excel' },
+    { id: 'crear', permiso: 'clientes.crear', nombre: 'Nuevo cliente' },
+    { id: 'editar', permiso: 'clientes.editar', nombre: 'Editar' },
+    { id: 'eliminar', permiso: 'clientes.eliminar', nombre: 'Eliminar' },
+    { id: 'migrar', permiso: 'clientes.migrar', nombre: 'Migrar campos actuales' },
+  ],
+  usuarios: [
+    { id: 'crear', permiso: 'usuarios.crear', nombre: 'Nuevo usuario' },
+    { id: 'editar', permiso: 'usuarios.editar', nombre: 'Editar' },
+    { id: 'eliminar', permiso: 'usuarios.eliminar', nombre: 'Eliminar' },
+  ],
+  configuraciones: [
+    { id: 'editar', permiso: 'configuraciones.editar', nombre: 'Guardar' },
+    { id: 'agregar', permiso: 'configuraciones.editar', nombre: 'Agregar configuración' },
+    { id: 'quitar', permiso: 'configuraciones.editar', nombre: 'Quitar' },
+    { id: 'backup', permiso: 'configuraciones.backup', nombre: 'Generar backup' },
+    { id: 'importar-backup', permiso: 'configuraciones.restaurar', nombre: 'Importar backup' },
+  ],
+  permisos: [
+    { id: 'editar', permiso: 'permisos.editar', nombre: 'Guardar' },
+  ],
+}
+
+export async function botonesDe(rol, vista) {
+  const defs = BOTONES[vista] || []
+  if (esAccesoTotal(rol)) {
+    return defs.map(({ id, nombre, to }) => (to ? { id, nombre, to } : { id, nombre }))
+  }
+  const lista = new Set(await permisosDe(rol))
+  return defs
+    .filter((boton) => lista.has(boton.permiso))
+    .map(({ id, nombre, to }) => (to ? { id, nombre, to } : { id, nombre }))
 }

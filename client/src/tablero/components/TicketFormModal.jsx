@@ -71,7 +71,8 @@ function TicketFormModal({
     let active = true
     listClientsRequest()
       .then((res) => {
-        if (active) setClients(Array.isArray(res.data) ? res.data : [])
+        const list = Array.isArray(res.data) ? res.data : res.data?.clients
+        if (active) setClients(Array.isArray(list) ? list : [])
       })
       .catch(() => {
         if (active) setClients([])

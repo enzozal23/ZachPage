@@ -14,7 +14,7 @@ import UsersPage from './components/UsersPage.jsx'
 import NewsPage from './components/NewsPage.jsx'
 import ClientsPage from './components/ClientsPage.jsx'
 import PermissionsPage from './components/PermissionsPage.jsx'
-import { tiene_permiso } from './lib/permisos.js'
+import { boton } from './lib/botones.js'
 
 const shellClass = 'flex min-h-dvh flex-col bg-canvas font-sans text-ink'
 
@@ -45,7 +45,10 @@ function App() {
   const showUsers = pathname === '/usuarios'
   const showPermisos = pathname === '/permisos'
   const showClients = pathname === '/clientes'
-  const puede = (permiso) => tiene_permiso(user?.role, permiso, user?.permisos || [])
+  const menu = user?.botones || []
+  const ve = (id) => Boolean(boton(menu, id))
+  const acciones = store.botones?.tablero || []
+  const accion = (id) => boton(acciones, id)
   const showNews = pathname === '/novedades'
   const openedTicket = ticketId
     ? store.tickets.find((ticket) => ticket.id === ticketId) || null
@@ -149,11 +152,12 @@ function App() {
         )}
 
         {showImports ? (
-          puede('importaciones.ver') ? <ImportsPage
+          ve('importaciones') ? <ImportsPage
             board={currentBoard}
             imports={store.imports}
             tickets={store.allTickets}
             author={author}
+            botones={store.botones?.importaciones || []}
             onImported={handleImported}
             onDeleteImport={(id) => {
               const removed = store.deleteImport(id)
@@ -166,32 +170,33 @@ function App() {
             }}
           /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver las importaciones.</p>
         ) : showActivity ? (
-          (pathname === '/logs' || pathname === '/monitoreo/sistema' ? puede('logs.ver') : puede('monitoreo.ver'))
+          (pathname === '/logs' || pathname === '/monitoreo/sistema' ? ve('logs') : ve('monitoreo'))
             ? <ActivityPage />
             : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver el monitoreo.</p>
         ) : showSettings ? (
-          puede('configuraciones.ver') ? <SettingsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver las configuraciones.</p>
+          ve('configuraciones') ? <SettingsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver las configuraciones.</p>
         ) : showUsers ? (
-          puede('usuarios.ver') ? <UsersPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver los usuarios.</p>
+          ve('usuarios') ? <UsersPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver los usuarios.</p>
         ) : showPermisos ? (
-          puede('permisos.ver') ? <PermissionsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver los permisos.</p>
+          ve('permisos') ? <PermissionsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver los permisos.</p>
         ) : showClients ? (
-          puede('clientes.ver') ? <ClientsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver los clientes.</p>
+          ve('clientes') ? <ClientsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver los clientes.</p>
         ) : showNews ? (
-          puede('novedades.ver') ? <NewsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver las novedades.</p>
-        ) : puede('tablero.ver') ? (
+          ve('novedades') ? <NewsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver las novedades.</p>
+        ) : ve('tablero') ? (
           <Board
             board={currentBoard}
             tickets={store.tickets}
-            onAddTicket={puede('tablero.crear') ? (status) => setCreating({ initialStatus: status }) : undefined}
-            onEditTicket={puede('tablero.editar') ? (ticket) => navigate(`/t/${ticket.id}`) : undefined}
-            onDeleteTicket={puede('tablero.eliminar') ? (id) => {
+            botones={acciones}
+            onAddTicket={accion('crear') ? (status) => setCreating({ initialStatus: status }) : undefined}
+            onEditTicket={accion('editar') ? (ticket) => navigate(`/t/${ticket.id}`) : undefined}
+            onDeleteTicket={accion('eliminar') ? (id) => {
               store.deleteTicket(id)
               if (id === ticketId) navigate('/', { replace: true })
             } : undefined}
-            onMoveTicket={puede('tablero.editar') ? store.moveTicket : undefined}
-            onSaveBoardFilters={puede('tablero.editar') ? store.saveBoardFilters : undefined}
-            onResetAll={puede('tablero.eliminar') ? () => {
+            onMoveTicket={accion('editar') ? store.moveTicket : undefined}
+            onSaveBoardFilters={accion('guardar-filtros') ? store.saveBoardFilters : undefined}
+            onResetAll={accion('reset') ? () => {
               store.resetAll()
               setCreating(null)
               setImportedBatch(null)
@@ -202,7 +207,7 @@ function App() {
           <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver el tablero.</p>
         )}
 
-        {((openedTicket && puede('tablero.editar')) || (creating && puede('tablero.crear'))) && (
+        {((openedTicket && accion('editar')) || (creating && accion('crear'))) && (
           <TicketFormModal
             mode={openedTicket ? 'edit' : 'create'}
             ticket={openedTicket}

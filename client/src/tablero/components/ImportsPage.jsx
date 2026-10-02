@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { ticketsFromImport } from '../lib/importTickets.js'
 import { parseWordDocx } from '../lib/wordImport.js'
 import { Button } from './ui/Button.jsx'
-import { usePermiso } from '../lib/permisos.js'
+import { boton } from '../lib/botones.js'
 import { confirmDialog } from '../lib/dialog.js'
 import { panelClass } from './ui/styles.js'
 
@@ -18,9 +18,10 @@ function ImportsPage({
   author,
   onImported,
   onDeleteImport,
+  botones = [],
 }) {
-  const puedeImportar = usePermiso('tablero.importar')
-  const puedeEliminar = usePermiso('importaciones.eliminar')
+  const importar = boton(botones, 'importar')
+  const eliminar = boton(botones, 'eliminar')
   const inputRef = useRef(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -77,8 +78,8 @@ function ImportsPage({
           </p>
         </div>
         <div>
-          {puedeImportar && <Button disabled={busy || !board} onClick={() => inputRef.current?.click()}>
-            {busy ? 'Importando…' : 'Importar Word'}
+          {importar && <Button disabled={busy || !board} onClick={() => inputRef.current?.click()}>
+            {busy ? 'Importando…' : importar.nombre}
           </Button>}
           <input ref={inputRef} type="file" accept=".docx" hidden onChange={handleFileChange} />
         </div>
@@ -99,8 +100,8 @@ function ImportsPage({
               <span>{item.imported} tickets</span>
               <span>{item.skippedNoTitle || 0} sin título</span>
               <time>{formatWhen(item.createdAt)}</time>
-              {puedeEliminar && <Button variant="danger" size="sm" onClick={() => handleDelete(item)}>
-                Eliminar
+              {eliminar && <Button variant="danger" size="sm" onClick={() => handleDelete(item)}>
+                {eliminar.nombre}
               </Button>}
             </div>
           </article>

@@ -8,7 +8,7 @@ import {
 } from '../../api/auth.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { Button } from './ui/Button.jsx'
-import { usePermiso } from '../lib/permisos.js'
+import { boton } from '../lib/botones.js'
 import { confirmDialog } from '../lib/dialog.js'
 import { Field } from './ui/Field.jsx'
 import { controlClass } from './ui/styles.js'
@@ -43,7 +43,7 @@ function UserFormModal({ mode, initial, isSelf, onClose, onSubmit }) {
         email: form.email.trim(),
         password: form.password,
         currentPassword: form.currentPassword,
-        role: form.role === 'admin' ? 'admin' : 'user',
+        role: form.role === 'admin' || form.role === '0623' ? form.role : 'user',
       })
     } catch (err) {
       setError(readError(err, 'No se pudo guardar el usuario.'))
@@ -109,13 +109,13 @@ function UserFormModal({ mode, initial, isSelf, onClose, onSubmit }) {
               />
             </Field>
           )}
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
-              checked={form.role === 'admin'}
-              onChange={(event) => setField('role', event.target.checked ? 'admin' : 'user')}
-            />
-            Administrador
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-muted">
+            Rol
+            <select className={controlClass} value={form.role} onChange={(event) => setField('role', event.target.value)}>
+              <option value="user">Usuario</option>
+              <option value="admin">Administrador</option>
+              <option value="0623">0623</option>
+            </select>
           </label>
           {error && <p className="rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{error}</p>}
           <div className="flex justify-end gap-2">
@@ -128,11 +128,17 @@ function UserFormModal({ mode, initial, isSelf, onClose, onSubmit }) {
   )
 }
 
+function readUsers(data) {
+  if (Array.isArray(data)) return data
+  return Array.isArray(data?.users) ? data.users : []
+}
+
 function UsersPage() {
   const { user, refreshProfile } = useAuth()
-  const puedeCrear = usePermiso('usuarios.crear')
-  const puedeEditar = usePermiso('usuarios.editar')
-  const puedeEliminar = usePermiso('usuarios.eliminar')
+  const [botones, setBotones] = useState([])
+  const crear = boton(botones, 'crear')
+  const editar = boton(botones, 'editar')
+  const eliminar = boton(botones, 'eliminar')
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -144,7 +150,8 @@ function UsersPage() {
     setError(null)
     try {
       const res = await listAllUsersRequest()
-      setUsers(Array.isArray(res.data) ? res.data : [])
+      setUsers(readUsers(res.data))
+      setBotones(Array.isArray(res.data?.botones) ? res.data.botones : [])
     } catch (err) {
       setError(readError(err, 'No se pudieron cargar los usuarios.'))
     } finally {
@@ -196,7 +203,7 @@ function UsersPage() {
           <h2 className="text-xl font-semibold text-ink">Usuarios</h2>
           <p className="mt-1 text-sm text-muted">Alta, edición y baja de quienes entran a Lexora.</p>
         </div>
-        {puedeCrear && <Button onClick={() => setEditor({ mode: 'create' })}>Nuevo usuario</Button>}
+        {crear && <Button onClick={() => setEditor({ mode: 'create' })}>{crear.nombre}</Button>}
       </div>
 
       {error && <p className="rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{error}</p>}
@@ -228,10 +235,10 @@ function UsersPage() {
                       {isSelf && <span className="ml-2 text-xs font-normal text-muted">Vos</span>}
                     </td>
                     <td className="px-4 py-3 text-muted">{account.email}</td>
-                    <td className="px-4 py-3 text-muted">{account.role === 'admin' ? 'Administrador' : 'Usuario'}</td>
+                    <td className="px-4 py-3 text-muted">{account.role === 'admin' ? 'Administrador' : account.role === '0623' ? '0623' : 'Usuario'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        {puedeEditar && <Button
+                        {editar && <Button
                           variant="secondary"
                           size="sm"
                           onClick={() => setEditor({
@@ -239,16 +246,16 @@ function UsersPage() {
                             user: account,
                           })}
                         >
-                          Editar
+                          {editar.nombre}
                         </Button>}
-                        {puedeEliminar && <Button
+                        {eliminar && <Button
                           variant="danger"
                           size="sm"
                           disabled={isSelf}
                           title={isSelf ? 'No podés eliminar tu propio usuario' : undefined}
                           onClick={() => handleDelete(account)}
                         >
-                          Eliminar
+                          {eliminar.nombre}
                         </Button>}
                       </div>
                     </td>
@@ -265,7 +272,7 @@ function UsersPage() {
           mode={editor.mode}
           isSelf={editor.mode === 'edit' && String(editor.user.id) === String(user?.id)}
           initial={editor.mode === 'edit'
-            ? { username: editor.user.username || '', email: editor.user.email || '', password: '', currentPassword: '', role: editor.user.role === 'admin' ? 'admin' : 'user' }
+            ? { username: editor.user.username || '', email: editor.user.email || '', password: '', currentPassword: '', role: editor.user.role === 'admin' || editor.user.role === '0623' ? editor.user.role : 'user' }
             : EMPTY_FORM}
           onClose={() => setEditor(null)}
           onSubmit={handleSubmit}

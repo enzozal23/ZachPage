@@ -10,7 +10,7 @@ import {
   writeActivities,
 } from '../libs/activityLog.js'
 import { publicSettings } from '../libs/dueReminderSettings.js'
-import { tiene_permiso } from '../libs/permisos.js'
+import { botonesDe, tiene_permiso } from '../libs/permisos.js'
 
 function publicComments(comments) {
   if (!Array.isArray(comments)) return []
@@ -145,20 +145,33 @@ function publicImport(item) {
   }
 }
 
+async function botonesKanban(req) {
+  const rol = req.user?.role
+  return {
+    tablero: await botonesDe(rol, 'tablero'),
+    importaciones: await botonesDe(rol, 'importaciones'),
+  }
+}
+
 export const getKanban = async (req, res) => {
+  const botones = await botonesKanban(req)
   const doc = await Kanban.findOne()
-  if (!doc) return res.json({ boards: [], tickets: [], imports: [], settings: publicSettings({}) })
+  if (!doc) return res.json({ boards: [], tickets: [], imports: [], settings: publicSettings({}), botones })
   res.json({
     boards: doc.boards,
     tickets: doc.tickets.map(publicTicket),
     imports: (doc.imports || []).map(publicImport),
     settings: publicSettings(doc.settings),
+    botones,
   })
 }
 
-export const getSettings = async (_req, res) => {
+export const getSettings = async (req, res) => {
   const doc = await Kanban.findOne()
-  res.json(publicSettings(doc?.settings))
+  res.json({
+    ...publicSettings(doc?.settings),
+    botones: await botonesDe(req.user?.role, 'configuraciones'),
+  })
 }
 
 export const saveSettings = async (req, res) => {
@@ -315,6 +328,7 @@ export const saveKanban = async (req, res) => {
     boards: doc.boards,
     tickets: doc.tickets.map(publicTicket),
     imports: (doc.imports || []).map(publicImport),
+    botones: await botonesKanban(req),
   })
 }
 

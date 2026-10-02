@@ -12,7 +12,7 @@ import ClientFieldsModal from './ClientFieldsModal.jsx'
 import { confirmDialog } from '../lib/dialog.js'
 import { clientName, downloadClientsExcel, downloadClientTemplate, parseClientWorkbook } from '../lib/clientExcel.js'
 import { Button } from './ui/Button.jsx'
-import { usePermiso } from '../lib/permisos.js'
+import { boton } from '../lib/botones.js'
 import { Field } from './ui/Field.jsx'
 import { controlClass } from './ui/styles.js'
 
@@ -455,13 +455,19 @@ function ImportModal({ onClose, onImported }) {
   )
 }
 
+function readClients(data) {
+  if (Array.isArray(data)) return data
+  return Array.isArray(data?.clients) ? data.clients : []
+}
+
 function ClientsPage() {
-  const puedeCampos = usePermiso('clientes.campos')
-  const puedeImportar = usePermiso('clientes.importar')
-  const puedeExportar = usePermiso('clientes.exportar')
-  const puedeCrear = usePermiso('clientes.crear')
-  const puedeEditar = usePermiso('clientes.editar')
-  const puedeEliminar = usePermiso('clientes.eliminar')
+  const [botones, setBotones] = useState([])
+  const campos = boton(botones, 'campos')
+  const importar = boton(botones, 'importar')
+  const exportar = boton(botones, 'exportar')
+  const crear = boton(botones, 'crear')
+  const editar = boton(botones, 'editar')
+  const eliminar = boton(botones, 'eliminar')
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -483,7 +489,8 @@ function ClientsPage() {
     setError(null)
     try {
       const res = await listClientsRequest()
-      setClients(Array.isArray(res.data) ? res.data : [])
+      setClients(readClients(res.data))
+      setBotones(Array.isArray(res.data?.botones) ? res.data.botones : [])
     } catch (err) {
       setError(readError(err, 'No se pudieron cargar los clientes.'))
     } finally {
@@ -549,17 +556,17 @@ function ClientsPage() {
           <p className="mt-1 text-sm text-muted">Alta manual o importación desde Excel.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {puedeCampos && <Button variant="secondary" onClick={() => setFieldsOpen(true)}>Campos configurables</Button>}
-          {puedeImportar && <Button variant="secondary" onClick={() => setImporting(true)}>Importar Excel</Button>}
-          {puedeExportar && <Button variant="secondary" onClick={async () => {
+          {campos && <Button variant="secondary" onClick={() => setFieldsOpen(true)}>{campos.nombre}</Button>}
+          {importar && <Button variant="secondary" onClick={() => setImporting(true)}>{importar.nombre}</Button>}
+          {exportar && <Button variant="secondary" onClick={async () => {
             try {
               await logClientsExportRequest(clients.length)
             } catch {
               // la descarga sigue aunque el log no se haya guardado
             }
             downloadClientsExcel(clients, fields)
-          }}>Exportar Excel</Button>}
-          {puedeCrear && <Button onClick={() => setEditor({ mode: 'create' })}>Nuevo cliente</Button>}
+          }}>{exportar.nombre}</Button>}
+          {crear && <Button onClick={() => setEditor({ mode: 'create' })}>{crear.nombre}</Button>}
         </div>
       </div>
 
@@ -630,14 +637,14 @@ function ClientsPage() {
                   ))}
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      {puedeEditar && <Button
+                      {editar && <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => setEditor({ mode: 'edit', client })}
                       >
-                        Editar
+                        {editar.nombre}
                       </Button>}
-                      {puedeEliminar && <Button variant="danger" size="sm" onClick={() => handleDelete(client)}>Eliminar</Button>}
+                      {eliminar && <Button variant="danger" size="sm" onClick={() => handleDelete(client)}>{eliminar.nombre}</Button>}
                     </div>
                   </td>
                 </tr>
@@ -657,7 +664,7 @@ function ClientsPage() {
         />
       )}
       {fieldsOpen && (
-        <ClientFieldsModal onClose={() => { setFieldsOpen(false); load() }} onChange={setFields} />
+        <ClientFieldsModal botones={botones} onClose={() => { setFieldsOpen(false); load() }} onChange={setFields} />
       )}
       {importing && (
         <ImportModal

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import TicketCard from './TicketCard.jsx'
 import { Button } from './ui/Button.jsx'
+import { boton } from '../lib/botones.js'
 
-function Column({ column, tickets, onAddTicket, onEditTicket, onDeleteTicket, onMoveTicket }) {
+function Column({ column, tickets, onAddTicket, onEditTicket, onDeleteTicket, onMoveTicket, botones = [], mail }) {
   const [over, setOver] = useState(false)
 
   function handleDragOver(event) {
@@ -45,17 +46,18 @@ function Column({ column, tickets, onAddTicket, onEditTicket, onDeleteTicket, on
             ticket={ticket}
             onEdit={onEditTicket}
             onDelete={onDeleteTicket}
+            mail={mail}
           />
         ))}
       </div>
 
-      {onAddTicket && <Button
+      {onAddTicket && boton(botones, 'crear') && <Button
         variant="ghost"
         align="start"
         className="w-full border border-dashed border-line"
         onClick={() => onAddTicket(column.id)}
       >
-        + Nuevo ticket
+        {boton(botones, 'crear').nombre}
       </Button>}
     </section>
   )

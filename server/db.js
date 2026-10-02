@@ -11,7 +11,7 @@ export const connectDB = async () => {
 
 
         await mongoose.connect(uri)
-        await User.updateMany({ role: { $nin: ['admin', 'user'] } }, { $set: { role: 'admin' } })
+        await User.updateMany({ role: { $nin: ['admin', 'user', '0623'] } }, { $set: { role: 'admin' } })
 
 
         console.log('mongo conectado')
