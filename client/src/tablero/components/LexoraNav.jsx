@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import inicioIcon from '../../images/inicio.png'
+import { usePermiso } from '../lib/permisos.js'
 
 function linkClass(active) {
   return `rounded-lg px-3 py-1.5 text-sm font-medium transition ${
@@ -27,6 +28,15 @@ function LexoraNav({
   const onNews = pathname === '/novedades'
   const displayName = user?.username || user?.email || ''
   const isDark = theme === 'dark'
+  const verTablero = usePermiso('tablero.ver')
+  const verClientes = usePermiso('clientes.ver')
+  const verImportaciones = usePermiso('importaciones.ver')
+  const verMonitoreo = usePermiso('monitoreo.ver')
+  const verConfig = usePermiso('configuraciones.ver')
+  const verLogs = usePermiso('logs.ver')
+  const verNovedades = usePermiso('novedades.ver')
+  const verUsuarios = usePermiso('usuarios.ver')
+  const verPermisos = usePermiso('permisos.ver')
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-5 py-3">
@@ -37,39 +47,42 @@ function LexoraNav({
         </Link>
 
         <nav className="flex flex-wrap items-center gap-1" aria-label="Secciones">
-          <Link to="/" className={linkClass(onBoard)} aria-current={onBoard ? 'page' : undefined}>
+          {verTablero && <Link to="/" className={linkClass(onBoard)} aria-current={onBoard ? 'page' : undefined}>
             Tablero
-          </Link>
-          <Link to="/clientes" className={linkClass(onClients)} aria-current={onClients ? 'page' : undefined}>
+          </Link>}
+          {verClientes && <Link to="/clientes" className={linkClass(onClients)} aria-current={onClients ? 'page' : undefined}>
             Clientes
-          </Link>
-          <Link
+          </Link>}
+          {verImportaciones && <Link
             to="/importaciones"
             className={linkClass(onImports)}
             aria-current={onImports ? 'page' : undefined}
           >
             Importaciones
-          </Link>
-          <Link
+          </Link>}
+          {verMonitoreo && <Link
             to="/monitoreo"
             className={linkClass(onMonitor)}
             aria-current={onMonitor ? 'page' : undefined}
           >
             Monitoreo
-          </Link>
-          <Link
+          </Link>}
+          {verConfig && <Link
             to="/configuraciones"
             className={linkClass(onSettings)}
             aria-current={onSettings ? 'page' : undefined}
           >
             Configuraciones
-          </Link>
-          <Link to="/monitoreo/sistema" className={linkClass(onLogs)} aria-current={onLogs ? 'page' : undefined}>
+          </Link>}
+          {verLogs && <Link to="/monitoreo/sistema" className={linkClass(onLogs)} aria-current={onLogs ? 'page' : undefined}>
             Logs
-          </Link>
-          <Link to="/novedades" className={linkClass(onNews)} aria-current={onNews ? 'page' : undefined}>
+          </Link>}
+          {verNovedades && <Link to="/novedades" className={linkClass(onNews)} aria-current={onNews ? 'page' : undefined}>
             Novedades
-          </Link>
+          </Link>}
+          {verPermisos && <Link to="/permisos" className={linkClass(pathname === '/permisos')} aria-current={pathname === '/permisos' ? 'page' : undefined}>
+            Permisos
+          </Link>}
         </nav>
       </div>
 
@@ -97,7 +110,7 @@ function LexoraNav({
           </span>
         </button>
 
-        <Link
+        {verUsuarios && <Link
           to="/usuarios"
           className={`flex h-9 w-9 items-center justify-center rounded-full border transition ${
             onUsers
@@ -112,7 +125,7 @@ function LexoraNav({
             <circle cx="12" cy="8" r="3.2" />
             <path d="M5 19.2c1.4-2.8 3.8-4.2 7-4.2s5.6 1.4 7 4.2" strokeLinecap="round" />
           </svg>
-        </Link>
+        </Link>}
         <button
           type="button"
           className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-muted transition hover:bg-sunken"

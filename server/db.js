@@ -1,5 +1,6 @@
 import mongoose from "mongoose"
 import dotenv from 'dotenv'
+import User from './models/user.models.js'
 dotenv.config()
 const uri = process.env.DB_TOKEN
 export const connectDB = async () => {
@@ -10,6 +11,7 @@ export const connectDB = async () => {
 
 
         await mongoose.connect(uri)
+        await User.updateMany({ role: { $nin: ['admin', 'user'] } }, { $set: { role: 'admin' } })
 
 
         console.log('mongo conectado')

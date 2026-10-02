@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { ticketsFromImport } from '../lib/importTickets.js'
 import { parseWordDocx } from '../lib/wordImport.js'
 import { Button } from './ui/Button.jsx'
+import { usePermiso } from '../lib/permisos.js'
 import { confirmDialog } from '../lib/dialog.js'
 import { panelClass } from './ui/styles.js'
 
@@ -18,6 +19,8 @@ function ImportsPage({
   onImported,
   onDeleteImport,
 }) {
+  const puedeImportar = usePermiso('tablero.importar')
+  const puedeEliminar = usePermiso('importaciones.eliminar')
   const inputRef = useRef(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -74,9 +77,9 @@ function ImportsPage({
           </p>
         </div>
         <div>
-          <Button disabled={busy || !board} onClick={() => inputRef.current?.click()}>
+          {puedeImportar && <Button disabled={busy || !board} onClick={() => inputRef.current?.click()}>
             {busy ? 'Importando…' : 'Importar Word'}
-          </Button>
+          </Button>}
           <input ref={inputRef} type="file" accept=".docx" hidden onChange={handleFileChange} />
         </div>
       </div>
@@ -96,9 +99,9 @@ function ImportsPage({
               <span>{item.imported} tickets</span>
               <span>{item.skippedNoTitle || 0} sin título</span>
               <time>{formatWhen(item.createdAt)}</time>
-              <Button variant="danger" size="sm" onClick={() => handleDelete(item)}>
+              {puedeEliminar && <Button variant="danger" size="sm" onClick={() => handleDelete(item)}>
                 Eliminar
-              </Button>
+              </Button>}
             </div>
           </article>
         ))}

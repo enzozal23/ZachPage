@@ -8,11 +8,12 @@ import {
 } from '../../api/auth.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { Button } from './ui/Button.jsx'
+import { usePermiso } from '../lib/permisos.js'
 import { confirmDialog } from '../lib/dialog.js'
 import { Field } from './ui/Field.jsx'
 import { controlClass } from './ui/styles.js'
 
-const EMPTY_FORM = { username: '', email: '', password: '' }
+const EMPTY_FORM = { username: '', email: '', password: '', currentPassword: '', role: 'user' }
 
 function readError(error, fallback) {
   const data = error.response?.data
@@ -21,7 +22,7 @@ function readError(error, fallback) {
   return fallback
 }
 
-function UserFormModal({ mode, initial, onClose, onSubmit }) {
+function UserFormModal({ mode, initial, isSelf, onClose, onSubmit }) {
   const titleId = useId()
   const [form, setForm] = useState(initial)
   const [error, setError] = useState(null)
@@ -41,6 +42,8 @@ function UserFormModal({ mode, initial, onClose, onSubmit }) {
         username: form.username.trim(),
         email: form.email.trim(),
         password: form.password,
+        currentPassword: form.currentPassword,
+        role: form.role === 'admin' ? 'admin' : 'user',
       })
     } catch (err) {
       setError(readError(err, 'No se pudo guardar el usuario.'))
@@ -87,12 +90,33 @@ function UserFormModal({ mode, initial, onClose, onSubmit }) {
               type="password"
               value={form.password}
               required={!editing}
-              minLength={form.password ? 6 : undefined}
+              minLength={form.password ? 10 : undefined}
               autoComplete="new-password"
-              placeholder={editing ? 'Vacío para no cambiarla' : 'Mínimo 6 caracteres'}
+              placeholder={editing ? 'Vacío para no cambiarla' : 'Mínimo 10 caracteres'}
               onChange={(event) => setField('password', event.target.value)}
             />
           </Field>
+          {editing && isSelf && (
+            <Field label="Contraseña actual">
+              <input
+                className={controlClass}
+                type="password"
+                value={form.currentPassword || ''}
+                required={Boolean(form.password)}
+                autoComplete="current-password"
+                placeholder="Hace falta para cambiar la contraseña"
+                onChange={(event) => setField('currentPassword', event.target.value)}
+              />
+            </Field>
+          )}
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={form.role === 'admin'}
+              onChange={(event) => setField('role', event.target.checked ? 'admin' : 'user')}
+            />
+            Administrador
+          </label>
           {error && <p className="rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={onClose}>Cancelar</Button>
@@ -106,6 +130,9 @@ function UserFormModal({ mode, initial, onClose, onSubmit }) {
 
 function UsersPage() {
   const { user, refreshProfile } = useAuth()
+  const puedeCrear = usePermiso('usuarios.crear')
+  const puedeEditar = usePermiso('usuarios.editar')
+  const puedeEliminar = usePermiso('usuarios.eliminar')
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -169,7 +196,7 @@ function UsersPage() {
           <h2 className="text-xl font-semibold text-ink">Usuarios</h2>
           <p className="mt-1 text-sm text-muted">Alta, edición y baja de quienes entran a Lexora.</p>
         </div>
-        <Button onClick={() => setEditor({ mode: 'create' })}>Nuevo usuario</Button>
+        {puedeCrear && <Button onClick={() => setEditor({ mode: 'create' })}>Nuevo usuario</Button>}
       </div>
 
       {error && <p className="rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{error}</p>}
@@ -187,6 +214,7 @@ function UsersPage() {
               <tr>
                 <th className="px-4 py-2 font-medium">Nombre</th>
                 <th className="px-4 py-2 font-medium">Mail</th>
+                <th className="px-4 py-2 font-medium">Rol</th>
                 <th className="px-4 py-2 font-medium">Acciones</th>
               </tr>
             </thead>
@@ -200,9 +228,10 @@ function UsersPage() {
                       {isSelf && <span className="ml-2 text-xs font-normal text-muted">Vos</span>}
                     </td>
                     <td className="px-4 py-3 text-muted">{account.email}</td>
+                    <td className="px-4 py-3 text-muted">{account.role === 'admin' ? 'Administrador' : 'Usuario'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <Button
+                        {puedeEditar && <Button
                           variant="secondary"
                           size="sm"
                           onClick={() => setEditor({
@@ -211,8 +240,8 @@ function UsersPage() {
                           })}
                         >
                           Editar
-                        </Button>
-                        <Button
+                        </Button>}
+                        {puedeEliminar && <Button
                           variant="danger"
                           size="sm"
                           disabled={isSelf}
@@ -220,7 +249,7 @@ function UsersPage() {
                           onClick={() => handleDelete(account)}
                         >
                           Eliminar
-                        </Button>
+                        </Button>}
                       </div>
                     </td>
                   </tr>
@@ -234,8 +263,9 @@ function UsersPage() {
       {editor && (
         <UserFormModal
           mode={editor.mode}
+          isSelf={editor.mode === 'edit' && String(editor.user.id) === String(user?.id)}
           initial={editor.mode === 'edit'
-            ? { username: editor.user.username || '', email: editor.user.email || '', password: '' }
+            ? { username: editor.user.username || '', email: editor.user.email || '', password: '', currentPassword: '', role: editor.user.role === 'admin' ? 'admin' : 'user' }
             : EMPTY_FORM}
           onClose={() => setEditor(null)}
           onSubmit={handleSubmit}

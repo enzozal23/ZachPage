@@ -4,6 +4,7 @@ import { ticketAssignees, ticketFollowers } from '../lib/assignees.js'
 import { resolveExpediente, visibleLabels } from '../lib/persist.js'
 import { dueTone } from '../lib/dueTone.js'
 import { Button } from './ui/Button.jsx'
+import { usePermiso } from '../lib/permisos.js'
 import { confirmDialog } from '../lib/dialog.js'
 
 const PRIORITY_BADGE = {
@@ -53,6 +54,7 @@ function TicketCard({ ticket, onEdit, onDelete }) {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState(null)
   const [dragging, setDragging] = useState(false)
+  const puedeMail = usePermiso('configuraciones.editar')
   const skipClick = useRef(false)
   const comments = ticket.comments?.length || 0
   const facts = readCaseFacts(ticket.description)
@@ -97,7 +99,7 @@ function TicketCard({ ticket, onEdit, onDelete }) {
           skipClick.current = false
           return
         }
-        onEdit(ticket)
+        if (onEdit) onEdit(ticket)
       }}
     >
       <span className={`w-1.5 shrink-0 ${accent}`} aria-hidden="true" />
@@ -107,7 +109,7 @@ function TicketCard({ ticket, onEdit, onDelete }) {
           {ticket.priority}
         </span>
         <span className="text-[0.7rem] tracking-wide text-muted uppercase" aria-hidden="true">Arrastrar</span>
-        <Button
+        {onDelete && <Button
           variant="iconDanger"
           size="icon"
           aria-label="Eliminar ticket"
@@ -122,7 +124,7 @@ function TicketCard({ ticket, onEdit, onDelete }) {
           }}
         >
           ×
-        </Button>
+        </Button>}
       </div>
 
       <h3 className="font-semibold text-ink">{ticket.title}</h3>
@@ -187,9 +189,9 @@ function TicketCard({ ticket, onEdit, onDelete }) {
 
       <div className="flex items-center justify-between gap-2 text-xs text-muted">
         <span>{historyLabel}</span>
-        <Button variant="secondary" size="sm" onClick={handleTestMail} disabled={busy}>
+        {puedeMail && <Button variant="secondary" size="sm" onClick={handleTestMail} disabled={busy}>
           {busy ? 'Enviando…' : 'Probar mail'}
-        </Button>
+        </Button>}
       </div>
       {notice && <p className="text-xs text-muted">{notice}</p>}
       </div>

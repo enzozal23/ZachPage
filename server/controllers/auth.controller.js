@@ -7,48 +7,38 @@ import dotenv from 'dotenv'
 import { readToken } from '../middlewares/validateToken.js';
 import { requestIp } from '../libs/activityLog.js';
 import { writeSessionLog } from '../libs/sessionLog.js';
+import { permisosDe } from '../libs/permisos.js';
 
-const cookieOptions = {
-    sameSite: 'none',
-    secure: true,
-    path: '/',
+function cookieOptions() {
+    const production = Boolean(process.env.RENDER) || process.env.NODE_ENV === 'production'
+    return {
+        httpOnly: true,
+        secure: production,
+        sameSite: production ? 'none' : 'lax',
+        path: '/',
+        maxAge: 24 * 60 * 60 * 1000,
+    }
+}
+
+function fail(res, error) {
+    console.error(error)
+    res.status(500).json({ message: 'No se pudo completar la operación.' })
+}
+
+function publicSession(user) {
+    return {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role || 'user',
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+    }
 }
 
 
 dotenv.config()
 
-export const register = async (req, res) => {
-    const { email, password, username } = req.body
-
-    try {
-        const userFound = await User.findOne({ email })
-        if (userFound) return res.status(400).json(['el correo ya esta en uso'])
-
-
-
-        const passwordHash = await brcypt.hash(password, 10)
-
-        const newUser = new User({
-            username,
-            email,
-            password: passwordHash
-        })
-        const userSaved = await newUser.save()
-        const token = await createAccessToken({ id: userSaved._id });
-        res.cookie('token', token, cookieOptions)
-        res.json({
-            id: userSaved._id,
-            username: userSaved.username,
-            email: userSaved.email,
-            createdAt: userSaved.createdAt,
-            updatedAt: userSaved.updatedAt,
-            token,
-        })
-    } catch (error) {
-        res.status(500).json({ message: error.message })
-    }
-
-}
 export const login = async (req, res) => {
     const { email, password } = req.body
     const ip = requestIp(req)
@@ -83,18 +73,11 @@ export const login = async (req, res) => {
             ip,
         })
 
-        const token = await createAccessToken({ id: userFound._id });
-        res.cookie('token', token, cookieOptions)
-        res.json({
-            id: userFound._id,
-            username: userFound.username,
-            email: userFound.email,
-            createdAt: userFound.createdAt,
-            updatedAt: userFound.updatedAt,
-            token,
-        })
+        const token = await createAccessToken({ id: userFound._id, tv: Number(userFound.tokenVersion || 0) });
+        res.cookie('token', token, cookieOptions())
+        res.json({ ...publicSession(userFound), permisos: await permisosDe(userFound.role || 'user') })
     } catch (error) {
-        res.status(500).json({ message: error.message })
+        fail(res, error)
     }
 }
 export const logout = async (req, res) => {
@@ -115,26 +98,16 @@ export const logout = async (req, res) => {
         // la sesión se cierra igual si el token ya no sirve
     }
     await writeSessionLog(entry)
-    res.cookie('token', '', {
-        ...cookieOptions,
-        expires: new Date(0),
-        maxAge: 0,
-    })
-    res.clearCookie('token', cookieOptions)
-    res.clearCookie('token', { sameSite: 'none', secure: true })
+    const options = cookieOptions()
+    res.clearCookie('token', options)
+    res.cookie('token', '', { ...options, expires: new Date(0), maxAge: 0 })
     res.sendStatus(200)
 }
 export const profile = async (req, res) => {
 
     const userFound = await User.findById(req.user.id)
     if (!userFound) return res.status(400).json({ message: 'usuario no encontrado' })
-    return res.json({
-        id: userFound._id,
-        username: userFound.username,
-        email: userFound.email,
-        createdAt: userFound.createdAt,
-        updatedAt: userFound.updatedAt
-    })
+    return res.json({ ...publicSession(userFound), permisos: await permisosDe(userFound.role || 'user') })
 }
 
 function publicUser(user) {
@@ -142,6 +115,7 @@ function publicUser(user) {
         id: user._id,
         username: user.username || '',
         email: user.email,
+        role: user.role || 'user',
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
     }
@@ -205,10 +179,10 @@ async function renameMentions(previous, next) {
 
 export const listAllUsers = async (req, res) => {
     try {
-        const users = await User.find().select('username email createdAt updatedAt').sort({ username: 1, email: 1 })
+        const users = await User.find().select('username email role createdAt updatedAt').sort({ username: 1, email: 1 })
         res.json(users.map(publicUser))
     } catch (error) {
-        res.status(500).json({ message: error.message })
+        fail(res, error)
     }
 }
 
@@ -218,11 +192,12 @@ export const createUser = async (req, res) => {
     try {
         if (await emailTaken(email)) return res.status(400).json({ message: 'Ese mail ya está en uso.' })
         const passwordHash = await brcypt.hash(req.body.password, 10)
-        const user = await User.create({ username, email, password: passwordHash })
+        const role = req.body.role === 'admin' ? 'admin' : 'user'
+        const user = await User.create({ username, email, password: passwordHash, role, tokenVersion: 0 })
         res.status(201).json(publicUser(user))
     } catch (error) {
         if (error.code === 11000) return res.status(400).json({ message: 'Ese mail ya está en uso.' })
-        res.status(500).json({ message: error.message })
+        fail(res, error)
     }
 }
 
@@ -235,19 +210,38 @@ export const updateUser = async (req, res) => {
         if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' })
         if (await emailTaken(email, user._id)) return res.status(400).json({ message: 'Ese mail ya está en uso.' })
         const previous = { username: user.username || '', email: user.email || '' }
+        const isSelf = String(user._id) === String(req.user?.id)
+        if (password) {
+            if (isSelf) {
+                const matches = await brcypt.compare(String(req.body.currentPassword || ''), user.password)
+                if (!matches) return res.status(400).json({ message: 'La contraseña actual no coincide.' })
+            }
+            user.password = await brcypt.hash(password, 10)
+            user.tokenVersion = Number(user.tokenVersion || 0) + 1
+        }
+        if (req.body.role === 'admin' || req.body.role === 'user') {
+            if (req.body.role === 'user' && user.role === 'admin') {
+                const others = await User.countDocuments({ role: 'admin', _id: { $ne: user._id } })
+                if (!others) return res.status(400).json({ message: 'Tiene que quedar al menos un administrador.' })
+            }
+            user.role = req.body.role
+        }
         user.username = username
         user.email = email
-        if (password) user.password = await brcypt.hash(password, 10)
         await user.save()
         try {
             await renameMentions(previous, { username, email })
         } catch (error) {
             console.error('No se pudieron actualizar las menciones del usuario', error)
         }
+        if (isSelf && password) {
+            const token = await createAccessToken({ id: user._id, tv: Number(user.tokenVersion || 0) })
+            res.cookie('token', token, cookieOptions())
+        }
         res.json(publicUser(user))
     } catch (error) {
         if (error.code === 11000) return res.status(400).json({ message: 'Ese mail ya está en uso.' })
-        res.status(500).json({ message: error.message })
+        fail(res, error)
     }
 }
 
@@ -256,11 +250,16 @@ export const deleteUser = async (req, res) => {
         if (String(req.params.id) === String(req.user?.id)) {
             return res.status(400).json({ message: 'No podés eliminar tu propio usuario.' })
         }
-        const user = await User.findByIdAndDelete(req.params.id)
+        const user = await User.findById(req.params.id)
         if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' })
+        if (user.role === 'admin') {
+            const others = await User.countDocuments({ role: 'admin', _id: { $ne: user._id } })
+            if (!others) return res.status(400).json({ message: 'Tiene que quedar al menos un administrador.' })
+        }
+        await user.deleteOne()
         res.sendStatus(204)
     } catch (error) {
-        res.status(500).json({ message: error.message })
+        fail(res, error)
     }
 }
 
@@ -279,25 +278,24 @@ export const listUsers = async (req, res) => {
             email: user.email,
         })))
     } catch (error) {
-        res.status(500).json({ message: error.message })
+        fail(res, error)
     }
 }
 
 export const verifyToken = async (req, res) => {
     const token = readToken(req)
-    if (!token) return res.status(401).json({ message: "unauthorized no token" });
+    if (!token) return res.status(401).json({ message: 'No autorizado.' })
 
-    jwt.verify(token, process.env.TOKEN_SECRET, async (error, user) => {
-        if (error) return res.status(401).json({ message: "unauthorized" })
-
-        const userFound = await User.findById(user.id)
-
-        if (!userFound) return res.status(401).json({ message: "unauthorized no user" });
-        return res.json({
-            id: userFound._id,
-            username: userFound.username,
-            email: userFound.email,
-        })
-    })
-
+    try {
+        const payload = jwt.verify(token, process.env.TOKEN_SECRET)
+        const userFound = await User.findById(payload.id)
+        if (!userFound) return res.status(401).json({ message: 'No autorizado.' })
+        if (Number(userFound.tokenVersion || 0) !== Number(payload.tv || 0)) {
+            return res.status(401).json({ message: 'No autorizado.' })
+        }
+        res.cookie('token', token, cookieOptions())
+        return res.json({ ...publicSession(userFound), permisos: await permisosDe(userFound.role || 'user') })
+    } catch {
+        return res.status(401).json({ message: 'No autorizado.' })
+    }
 }

@@ -19,7 +19,7 @@
     "react-hook-form": "^7.53.0",
     "react-router-dom": "^6.26.1",
     "sweetalert2": "^11.26.25",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

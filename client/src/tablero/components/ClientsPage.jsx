@@ -12,6 +12,7 @@ import ClientFieldsModal from './ClientFieldsModal.jsx'
 import { confirmDialog } from '../lib/dialog.js'
 import { clientName, downloadClientsExcel, downloadClientTemplate, parseClientWorkbook } from '../lib/clientExcel.js'
 import { Button } from './ui/Button.jsx'
+import { usePermiso } from '../lib/permisos.js'
 import { Field } from './ui/Field.jsx'
 import { controlClass } from './ui/styles.js'
 
@@ -455,6 +456,12 @@ function ImportModal({ onClose, onImported }) {
 }
 
 function ClientsPage() {
+  const puedeCampos = usePermiso('clientes.campos')
+  const puedeImportar = usePermiso('clientes.importar')
+  const puedeExportar = usePermiso('clientes.exportar')
+  const puedeCrear = usePermiso('clientes.crear')
+  const puedeEditar = usePermiso('clientes.editar')
+  const puedeEliminar = usePermiso('clientes.eliminar')
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -542,17 +549,17 @@ function ClientsPage() {
           <p className="mt-1 text-sm text-muted">Alta manual o importación desde Excel.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => setFieldsOpen(true)}>Campos configurables</Button>
-          <Button variant="secondary" onClick={() => setImporting(true)}>Importar Excel</Button>
-          <Button variant="secondary" onClick={async () => {
+          {puedeCampos && <Button variant="secondary" onClick={() => setFieldsOpen(true)}>Campos configurables</Button>}
+          {puedeImportar && <Button variant="secondary" onClick={() => setImporting(true)}>Importar Excel</Button>}
+          {puedeExportar && <Button variant="secondary" onClick={async () => {
             try {
               await logClientsExportRequest(clients.length)
             } catch {
               // la descarga sigue aunque el log no se haya guardado
             }
             downloadClientsExcel(clients, fields)
-          }}>Exportar Excel</Button>
-          <Button onClick={() => setEditor({ mode: 'create' })}>Nuevo cliente</Button>
+          }}>Exportar Excel</Button>}
+          {puedeCrear && <Button onClick={() => setEditor({ mode: 'create' })}>Nuevo cliente</Button>}
         </div>
       </div>
 
@@ -623,14 +630,14 @@ function ClientsPage() {
                   ))}
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      <Button
+                      {puedeEditar && <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => setEditor({ mode: 'edit', client })}
                       >
                         Editar
-                      </Button>
-                      <Button variant="danger" size="sm" onClick={() => handleDelete(client)}>Eliminar</Button>
+                      </Button>}
+                      {puedeEliminar && <Button variant="danger" size="sm" onClick={() => handleDelete(client)}>Eliminar</Button>}
                     </div>
                   </td>
                 </tr>

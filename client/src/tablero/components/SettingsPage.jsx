@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { getSettingsRequest, saveSettingsRequest } from '../../api/settings.js'
 import { Button } from './ui/Button.jsx'
+import { usePermiso } from '../lib/permisos.js'
 import { controlClass } from './ui/styles.js'
 import {
   DEFAULT_DAYS_BEFORE,
@@ -195,6 +196,7 @@ function RuleModal({ onClose, onAdd, existingKeys }) {
 }
 
 function SettingsPage() {
+  const puedeEditar = usePermiso('configuraciones.editar')
   const [openSection, setOpenSection] = useState('due-reminders')
   const [rules, setRules] = useState([])
   const [mailEnabled, setMailEnabled] = useState(true)
@@ -402,7 +404,7 @@ function SettingsPage() {
                     )}
 
                     <div className="flex justify-end">
-                      <Button type="submit" disabled={saving}>
+                      <Button type="submit" disabled={saving || !puedeEditar}>
                         {saving ? 'Guardando…' : 'Guardar'}
                       </Button>
                     </div>

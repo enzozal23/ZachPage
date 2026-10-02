@@ -8,6 +8,7 @@ import {
 } from '../../api/clients.js'
 import { confirmDialog } from '../lib/dialog.js'
 import { Button } from './ui/Button.jsx'
+import { usePermiso } from '../lib/permisos.js'
 import { Field } from './ui/Field.jsx'
 import { controlClass } from './ui/styles.js'
 
@@ -70,6 +71,7 @@ function OptionEditor({ options, locked, onChange }) {
 }
 
 function ClientFieldsModal({ onClose, onChange }) {
+  const puedeMigrar = usePermiso('clientes.migrar')
   const titleId = useId()
   const [fields, setFields] = useState([])
   const [editor, setEditor] = useState(null)
@@ -194,7 +196,7 @@ function ClientFieldsModal({ onClose, onChange }) {
         <header className="mb-4 flex items-center justify-between gap-3">
           <h3 id={titleId} className="text-lg font-semibold text-ink">Campos configurables</h3>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleMigrate} disabled={saving || !ready || !pendingMigration} title={pendingMigration ? undefined : 'Los campos actuales ya están migrados'}>Migrar campos actuales</Button>
+            <Button variant="secondary" onClick={handleMigrate} disabled={saving || !ready || !pendingMigration || !puedeMigrar} title={!puedeMigrar ? 'No tenés permiso para migrar' : pendingMigration ? undefined : 'Los campos actuales ya están migrados'}>Migrar campos actuales</Button>
             <Button onClick={openCreate}>Nuevo campo</Button>
             <Button variant="secondary" onClick={onClose}>Cerrar</Button>
           </div>

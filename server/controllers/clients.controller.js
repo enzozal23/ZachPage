@@ -269,6 +269,13 @@ function mergeOptionColors(current, incoming) {
   })
 }
 
+const RESERVED_CLAVES = new Set(['id', 'createdAt', 'updatedAt', 'extras', 'constructor', 'prototype'])
+const CLAVE_RE = /^[a-zA-Z][a-zA-Z0-9]*$/
+
+export function isSafeClave(clave) {
+  return CLAVE_RE.test(clave) && !RESERVED_CLAVES.has(clave)
+}
+
 function normalizeField(input) {
   const nombre = String(input?.nombre || '').trim()
   const tipo = String(input?.tipo || '').trim()
@@ -280,6 +287,8 @@ function normalizeField(input) {
   if (!FIELD_TYPES.has(tipo)) errors.push('El tipo tiene que ser texto, número, fecha, checkbox o selector.')
   if (!Number.isFinite(orden)) errors.push('El orden tiene que ser un número.')
   if (tipo === 'selector' && opciones.length === 0) errors.push('El selector necesita al menos una opción.')
+  const clave = String(input?.clave || '').trim()
+  if (clave && !isSafeClave(clave)) errors.push('La clave del campo no es válida.')
   return {
     value: {
       nombre,
@@ -287,7 +296,7 @@ function normalizeField(input) {
       orden: Number.isFinite(orden) ? orden : 0,
       requerido,
       opciones: tipo === 'selector' ? opciones : [],
-      clave: String(input?.clave || '').trim(),
+      clave: clave && isSafeClave(clave) ? clave : '',
     },
     errors,
   }
@@ -345,7 +354,7 @@ async function attachExtras(body, value, errors) {
   const result = normalizeExtras(body.extras, fields)
   const next = { ...value, extras: result.extras }
   for (const field of fields) {
-    if (!field.clave || !Object.prototype.hasOwnProperty.call(result.extras, field.id)) continue
+    if (!field.clave || !isSafeClave(field.clave) || !Object.prototype.hasOwnProperty.call(result.extras, field.id)) continue
     next[field.clave] = result.extras[field.id]
   }
   return { value: next, errors: [...errors, ...result.errors] }
@@ -357,7 +366,7 @@ export const listClientFields = async (_req, res) => {
 }
 
 export const createClientField = async (req, res) => {
-  const { value, errors } = normalizeField(req.body)
+  const { value, errors } = normalizeField({ ...req.body, clave: '' })
   if (errors.length) return res.status(400).json({ message: errors.join(' ') })
   const doc = await ClientField.create(value)
   const saved = publicField(doc)
@@ -441,6 +450,8 @@ export const updateClientField = async (req, res) => {
     incoming.opciones = current.tipo === 'selector'
       ? mergeOptionColors(currentPublic.opciones, req.body?.opciones)
       : currentPublic.opciones
+  } else {
+    incoming.clave = ''
   }
   const { value, errors } = normalizeField(incoming)
   if (errors.length) return res.status(400).json({ message: errors.join(' ') })

@@ -19,7 +19,7 @@ function Column({ column, tickets, onAddTicket, onEditTicket, onDeleteTicket, on
     event.preventDefault()
     setOver(false)
     const ticketId = event.dataTransfer.getData('text/plain')
-    if (ticketId) onMoveTicket(ticketId, column.id)
+    if (ticketId && onMoveTicket) onMoveTicket(ticketId, column.id)
   }
 
   return (
@@ -49,14 +49,14 @@ function Column({ column, tickets, onAddTicket, onEditTicket, onDeleteTicket, on
         ))}
       </div>
 
-      <Button
+      {onAddTicket && <Button
         variant="ghost"
         align="start"
         className="w-full border border-dashed border-line"
         onClick={() => onAddTicket(column.id)}
       >
         + Nuevo ticket
-      </Button>
+      </Button>}
     </section>
   )
 }

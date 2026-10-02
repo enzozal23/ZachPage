@@ -10,6 +10,7 @@ import {
   writeActivities,
 } from '../libs/activityLog.js'
 import { publicSettings } from '../libs/dueReminderSettings.js'
+import { tiene_permiso } from '../libs/permisos.js'
 
 function publicComments(comments) {
   if (!Array.isArray(comments)) return []
@@ -200,6 +201,44 @@ export const saveSettings = async (req, res) => {
   res.json(publicSettings(doc.settings))
 }
 
+function firmaTicket(ticket) {
+  const copy = { ...(ticket || {}) }
+  delete copy.reminderSentFor
+  return JSON.stringify(copy)
+}
+
+async function permisoFaltanteDelTablero(rol, cambio) {
+  const antes = new Map((cambio.previousTickets || []).map((ticket) => [ticket.id, ticket]))
+  const despues = new Map((cambio.nextTickets || []).map((ticket) => [ticket.id, ticket]))
+  let crear = false
+  let editar = false
+  let eliminar = false
+  for (const [id, ticket] of despues) {
+    if (!antes.has(id)) crear = true
+    else if (firmaTicket(antes.get(id)) !== firmaTicket(ticket)) editar = true
+  }
+  for (const id of antes.keys()) {
+    if (!despues.has(id)) eliminar = true
+  }
+  if (JSON.stringify(cambio.previousBoards || []) !== JSON.stringify(cambio.nextBoards || [])) editar = true
+  const antesImp = new Set((cambio.previousImports || []).map((item) => item.id))
+  const despuesImp = new Set((cambio.nextImports || []).map((item) => item.id))
+  let importar = false
+  let borrarImport = false
+  for (const id of despuesImp) if (!antesImp.has(id)) importar = true
+  for (const id of antesImp) if (!despuesImp.has(id)) borrarImport = true
+  const pedidos = []
+  if (crear) pedidos.push('tablero.crear')
+  if (editar) pedidos.push('tablero.editar')
+  if (eliminar) pedidos.push('tablero.eliminar')
+  if (importar) pedidos.push('tablero.importar')
+  if (borrarImport) pedidos.push('importaciones.eliminar')
+  for (const permiso of pedidos) {
+    if (!(await tiene_permiso(rol, permiso))) return permiso
+  }
+  return ''
+}
+
 export const saveKanban = async (req, res) => {
   const boards = Array.isArray(req.body?.boards) ? req.body.boards : []
   const incoming = Array.isArray(req.body?.tickets) ? req.body.tickets : []
@@ -227,6 +266,15 @@ export const saveKanban = async (req, res) => {
   })
 
   const imports = incomingImports || importsFromTickets(incoming) || doc?.imports || []
+  const faltante = await permisoFaltanteDelTablero(req.user?.role, {
+    previousTickets: previousRaw,
+    nextTickets: tickets.map(publicTicket),
+    previousImports,
+    nextImports: (imports || []).map(publicImport),
+    previousBoards: doc?.boards || [],
+    nextBoards: boards,
+  })
+  if (faltante) return res.status(403).json({ message: 'No tenés permiso para esto.' })
 
   if (!doc) doc = new Kanban({ boards, tickets, imports })
   else {
@@ -287,10 +335,10 @@ export const testDueReminder = async (req, res) => {
     await logInfo('Prueba de mail enviada', { ticketId: ticket.id, to: email })
     res.json({ message: `Mail enviado a ${email}` })
   } catch (error) {
-    const status = error.status || 500
+    const status = error.status && error.status < 500 ? error.status : 500
     await logError('Falló la prueba de mail', error, { ticketId: req.params.id })
     res.status(status).json({
-      message: error.message || 'No se pudo enviar el mail.',
+      message: status < 500 && error.message ? error.message : 'No se pudo enviar el mail.',
     })
   }
 }
@@ -311,6 +359,6 @@ export const runDueReminders = async (req, res) => {
     })
   } catch (error) {
     await logError('Cron externo falló', error, { trigger })
-    res.status(500).json({ message: error.message || 'No se pudo revisar los vencimientos.' })
+    res.status(500).json({ message: 'No se pudo revisar los vencimientos.' })
   }
 }

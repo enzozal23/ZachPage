@@ -59,7 +59,7 @@ function Board({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-ink">{board.name}</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
+          {onResetAll && <Button
             variant="danger"
             onClick={async () => {
               const confirmed = await confirmDialog({
@@ -71,7 +71,7 @@ function Board({
             }}
           >
             Eliminar todo
-          </Button>
+          </Button>}
         </div>
       </div>
 

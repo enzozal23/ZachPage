@@ -5,7 +5,7 @@ import { logError } from './appLog.js'
 
 dotenv.config()
 
-const FROM = 'ZachSuplementos <zachsuplementos@gmail.com>'
+const FROM = process.env.MAIL_FROM || `Lexora <${process.env.GMAIL_USER || 'zachsuplementos@gmail.com'}>`
 
 function resendCredentials() {
   const named = ['RESEND_API_KEY', 'RESEND_KEY', 'RESEND', 'RESEND_TOKEN', 'API_KEY_RESEND']
@@ -89,7 +89,7 @@ export async function sendMail({ to, subject, text, kind = 'general' }) {
   const resend = resendCredentials()
 
   if (resend) {
-    const from = process.env.MAIL_FROM || 'ZachSuplementos <onboarding@resend.dev>'
+    const from = process.env.MAIL_FROM || 'Lexora <onboarding@resend.dev>'
     try {
       const result = await sendWithResend({ to: recipients, subject: base.subject, text: base.text, apiKey: resend.value })
       await recordMail({ ...base, from: result.from, status: 'sent', provider: 'resend', messageId: result.messageId })

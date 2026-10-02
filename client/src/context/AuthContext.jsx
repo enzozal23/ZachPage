@@ -1,18 +1,14 @@
 import { createContext, useState, useContext, useEffect } from "react";
-import { registerRequest, loginRequest, logoutRequest, verifyTokenRequest } from '../api/auth'
-import Cookies from 'js-cookie'
-
-const TOKEN_KEY = 'token'
+import { loginRequest, logoutRequest, verifyTokenRequest } from '../api/auth'
 const AuthContext = createContext()
 
-function saveToken(token) {
-    if (token) localStorage.setItem(TOKEN_KEY, token)
-}
-
 function clearToken() {
-    localStorage.removeItem(TOKEN_KEY)
-    Cookies.remove('token')
-    Cookies.remove('token', { path: '/' })
+    try {
+        localStorage.removeItem('token')
+        sessionStorage.removeItem('tablero-kanban:token')
+    } catch {
+        // la sesión vive en la cookie httpOnly
+    }
 }
 
 function readError(error) {
@@ -36,28 +32,12 @@ export const AuthProvider = ({ children }) => {
     const [errors, setErrors] = useState([])
     const [loading, setLoading] = useState(true)
 
-    const signup = async (user) => {
-        try {
-            const res = await registerRequest(user)
-            saveToken(res.data.token)
-            const sessionUser = { ...res.data }
-            delete sessionUser.token
-            setUser(sessionUser)
-            setIsAuthenticated(true)
-        } catch (error) {
-            setErrors(readError(error))
-        }
-    }
-    // ⬆️⬇️estas funciones pasan del front los datos (user) hacia el front a traves de auth.js donde estan las direcciones de la api y setean los errores
-
     const signin = async (user) => {
         try {
             const res = await loginRequest(user)
-            saveToken(res.data.token)
-            const sessionUser = { ...res.data }
-            delete sessionUser.token
+            clearToken()
             setIsAuthenticated(true)
-            setUser(sessionUser)
+            setUser(res.data)
         } catch (error) {
             setErrors(readError(error))
         }
@@ -111,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     }, [])
 
     return (//context para poder compartir todos los datos en las distintas paginas de la website
-        <AuthContext.Provider value={{ signup, signin, logout, refreshProfile, loading, user, isAuthenticated, errors }}>
+        <AuthContext.Provider value={{ signin, logout, refreshProfile, loading, user, isAuthenticated, errors }}>
             {children}
         </AuthContext.Provider>
     )

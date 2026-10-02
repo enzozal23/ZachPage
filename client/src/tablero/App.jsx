@@ -13,6 +13,8 @@ import SettingsPage from './components/SettingsPage.jsx'
 import UsersPage from './components/UsersPage.jsx'
 import NewsPage from './components/NewsPage.jsx'
 import ClientsPage from './components/ClientsPage.jsx'
+import PermissionsPage from './components/PermissionsPage.jsx'
+import { tiene_permiso } from './lib/permisos.js'
 
 const shellClass = 'flex min-h-dvh flex-col bg-canvas font-sans text-ink'
 
@@ -41,7 +43,9 @@ function App() {
   const showActivity = pathname === '/monitoreo' || pathname.startsWith('/monitoreo/') || pathname === '/logs'
   const showSettings = pathname === '/configuraciones'
   const showUsers = pathname === '/usuarios'
+  const showPermisos = pathname === '/permisos'
   const showClients = pathname === '/clientes'
+  const puede = (permiso) => tiene_permiso(user?.role, permiso, user?.permisos || [])
   const showNews = pathname === '/novedades'
   const openedTicket = ticketId
     ? store.tickets.find((ticket) => ticket.id === ticketId) || null
@@ -145,7 +149,7 @@ function App() {
         )}
 
         {showImports ? (
-          <ImportsPage
+          puede('importaciones.ver') ? <ImportsPage
             board={currentBoard}
             imports={store.imports}
             tickets={store.allTickets}
@@ -160,39 +164,45 @@ function App() {
               })
               if (ticketId && removed.includes(ticketId)) navigate('/', { replace: true })
             }}
-          />
+          /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver las importaciones.</p>
         ) : showActivity ? (
-          <ActivityPage />
+          (pathname === '/logs' || pathname === '/monitoreo/sistema' ? puede('logs.ver') : puede('monitoreo.ver'))
+            ? <ActivityPage />
+            : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver el monitoreo.</p>
         ) : showSettings ? (
-          <SettingsPage />
+          puede('configuraciones.ver') ? <SettingsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver las configuraciones.</p>
         ) : showUsers ? (
-          <UsersPage />
+          puede('usuarios.ver') ? <UsersPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver los usuarios.</p>
+        ) : showPermisos ? (
+          puede('permisos.ver') ? <PermissionsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver los permisos.</p>
         ) : showClients ? (
-          <ClientsPage />
+          puede('clientes.ver') ? <ClientsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver los clientes.</p>
         ) : showNews ? (
-          <NewsPage />
-        ) : (
+          puede('novedades.ver') ? <NewsPage /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver las novedades.</p>
+        ) : puede('tablero.ver') ? (
           <Board
             board={currentBoard}
             tickets={store.tickets}
-            onAddTicket={(status) => setCreating({ initialStatus: status })}
-            onEditTicket={(ticket) => navigate(`/t/${ticket.id}`)}
-            onDeleteTicket={(id) => {
+            onAddTicket={puede('tablero.crear') ? (status) => setCreating({ initialStatus: status }) : undefined}
+            onEditTicket={puede('tablero.editar') ? (ticket) => navigate(`/t/${ticket.id}`) : undefined}
+            onDeleteTicket={puede('tablero.eliminar') ? (id) => {
               store.deleteTicket(id)
               if (id === ticketId) navigate('/', { replace: true })
-            }}
-            onMoveTicket={store.moveTicket}
-            onSaveBoardFilters={store.saveBoardFilters}
-            onResetAll={() => {
+            } : undefined}
+            onMoveTicket={puede('tablero.editar') ? store.moveTicket : undefined}
+            onSaveBoardFilters={puede('tablero.editar') ? store.saveBoardFilters : undefined}
+            onResetAll={puede('tablero.eliminar') ? () => {
               store.resetAll()
               setCreating(null)
               setImportedBatch(null)
               if (ticketId) navigate('/', { replace: true })
-            }}
+            } : undefined}
           />
+        ) : (
+          <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver el tablero.</p>
         )}
 
-        {(openedTicket || creating) && (
+        {((openedTicket && puede('tablero.editar')) || (creating && puede('tablero.crear'))) && (
           <TicketFormModal
             mode={openedTicket ? 'edit' : 'create'}
             ticket={openedTicket}
