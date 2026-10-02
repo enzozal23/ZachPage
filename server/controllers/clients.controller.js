@@ -227,11 +227,17 @@ export const listClients = async (_req, res) => {
 
 const FIELD_TYPES = new Set(['texto', 'numero', 'fecha', 'checkbox', 'selector'])
 
+function optionColor(value) {
+  const color = String(value || '').trim()
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color.toLowerCase() : ''
+}
+
 function publicOption(item) {
   if (item && typeof item === 'object') {
     const value = String(item.value || '').trim()
     const label = String(item.label || value).trim()
-    return value ? { value, label } : null
+    const color = optionColor(item.color)
+    return value ? { value, label, ...(color ? { color } : {}) } : null
   }
   const value = String(item || '').trim()
   return value ? { value, label: value } : null
@@ -247,6 +253,20 @@ function publicField(doc) {
     opciones: (Array.isArray(doc.opciones) ? doc.opciones : []).map(publicOption).filter(Boolean),
     clave: doc.clave || '',
   }
+}
+
+function mergeOptionColors(current, incoming) {
+  const colors = new Map()
+  if (Array.isArray(incoming)) {
+    for (const item of incoming) {
+      const value = item && typeof item === 'object' ? item.value : item
+      if (value) colors.set(String(value), item?.color || '')
+    }
+  }
+  return current.map((option) => {
+    const color = colors.has(option.value) ? optionColor(colors.get(option.value)) : (option.color || '')
+    return color ? { ...option, color } : { value: option.value, label: option.label }
+  })
 }
 
 function normalizeField(input) {
@@ -362,7 +382,7 @@ const BUILTIN_FIELDS = [
   { clave: 'razonSocial', nombre: 'Razón social', tipo: 'texto', orden: 5, requerido: false },
   { clave: 'email', nombre: 'Mail', tipo: 'texto', orden: 6, requerido: false },
   { clave: 'telefono', nombre: 'Teléfono', tipo: 'texto', orden: 7, requerido: false },
-  { clave: 'criticidad', nombre: 'Criticidad', tipo: 'selector', orden: 8, requerido: true, opciones: [{ value: 'alta', label: 'Alta' }, { value: 'media', label: 'Media' }, { value: 'baja', label: 'Baja' }] },
+  { clave: 'criticidad', nombre: 'Criticidad', tipo: 'selector', orden: 8, requerido: true, opciones: [{ value: 'alta', label: 'Alta', color: '#dc2626' }, { value: 'media', label: 'Media', color: '#d97706' }, { value: 'baja', label: 'Baja', color: '#059669' }] },
   { clave: 'poder', nombre: 'Poder', tipo: 'checkbox', orden: 9, requerido: false },
   { clave: 'patrocinio', nombre: 'Patrocinio', tipo: 'checkbox', orden: 10, requerido: false },
 ]
@@ -418,14 +438,15 @@ export const updateClientField = async (req, res) => {
   if (current.clave) {
     incoming.clave = current.clave
     incoming.tipo = current.tipo
-    incoming.opciones = currentPublic.opciones
-  } else if (Array.isArray(req.body?.opciones)) {
-    incoming.opciones = req.body.opciones.map((item) => item?.value || item).join(',')
+    incoming.opciones = current.tipo === 'selector'
+      ? mergeOptionColors(currentPublic.opciones, req.body?.opciones)
+      : currentPublic.opciones
   }
   const { value, errors } = normalizeField(incoming)
   if (errors.length) return res.status(400).json({ message: errors.join(' ') })
   const before = publicField(current)
   Object.assign(current, value)
+  current.markModified('opciones')
   await current.save()
   const after = publicField(current)
   const actor = await actorOf(req)
@@ -448,8 +469,15 @@ export const updateClientField = async (req, res) => {
       detail: { before, after },
     })
   }
-  if (JSON.stringify(before.opciones) !== JSON.stringify(after.opciones)) {
+  const beforeOptions = (before.opciones || []).map(({ color, ...option }) => option)
+  const afterOptions = (after.opciones || []).map(({ color, ...option }) => option)
+  if (JSON.stringify(beforeOptions) !== JSON.stringify(afterOptions)) {
     fieldChanges.push({ ...base, action: 'update', summary: `Actualizó las opciones del campo «${after.nombre}»`, detail: { before: before.opciones, after: after.opciones } })
+  }
+  const beforeColors = (before.opciones || []).map((option) => option.color || '')
+  const afterColors = (after.opciones || []).map((option) => option.color || '')
+  if (JSON.stringify(beforeColors) !== JSON.stringify(afterColors)) {
+    fieldChanges.push({ ...base, action: 'update', summary: `Actualizó los colores del campo «${after.nombre}»`, detail: { before: before.opciones, after: after.opciones } })
   }
   await writeActivities(fieldChanges)
   res.json(after)

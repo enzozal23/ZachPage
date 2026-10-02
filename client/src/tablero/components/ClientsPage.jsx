@@ -29,13 +29,11 @@ const EMPTY_FORM = {
   extras: {},
 }
 
-const CRITICIDAD_CLASS = {
-  alta: 'bg-chip-red text-chip-red-ink',
-  media: 'bg-chip-amber text-chip-amber-ink',
-  baja: 'bg-chip-emerald text-chip-emerald-ink',
-}
-
 const CRITICIDAD_LABEL = { alta: 'Alta', media: 'Media', baja: 'Baja' }
+
+function criticidadLabel(value) {
+  return CRITICIDAD_LABEL[value] || value || '—'
+}
 
 function clientFormInitial(client, fields) {
   const extras = { ...(client?.extras || {}) }
@@ -55,6 +53,22 @@ function representacionLabel(client) {
   return parts.join(', ') || '—'
 }
 
+function claveCell(fields, clave, value, fallback) {
+  const field = (fields || []).find((item) => item.clave === clave)
+  if (!field || field.tipo !== 'selector') return fallback
+  const option = optionOf(field, value)
+  if (!option) return fallback
+  return <OptionBadge option={option} fallback={fallback} />
+}
+
+function fieldCell(field, client) {
+  const value = field.clave ? client?.[field.clave] : client.extras?.[field.id]
+  if (field.tipo === 'checkbox') return value ? 'Sí' : 'No'
+  if (field.tipo === 'selector') return <OptionBadge option={optionOf(field, value)} fallback={value} />
+  if (value === undefined || value === null || value === '') return '—'
+  return String(value)
+}
+
 function readError(error, fallback) {
   const data = error.response?.data
   if (Array.isArray(data)) return data.filter(Boolean).join(' ')
@@ -62,17 +76,46 @@ function readError(error, fallback) {
   return fallback
 }
 
-function CriticidadBadge({ value }) {
+function optionValue(option) {
+  return option && typeof option === 'object' ? option.value : option
+}
+
+function optionLabel(option) {
+  return option && typeof option === 'object' ? (option.label || option.value) : option
+}
+
+function optionOf(field, value) {
+  return (field?.opciones || []).find((item) => optionValue(item) === value) || null
+}
+
+function optionColor(option) {
+  const color = option?.color || ''
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color : ''
+}
+
+function badgeInk(color) {
+  const value = Number.parseInt(color.slice(1), 16)
+  const red = (value >> 16) & 255
+  const green = (value >> 8) & 255
+  const blue = value & 255
+  return (red * 299 + green * 587 + blue * 114) / 1000 > 150 ? '#0f172a' : '#ffffff'
+}
+
+function OptionBadge({ option, fallback = '' }) {
+  const label = option ? optionLabel(option) : fallback
+  const color = optionColor(option)
+  if (!label) return '—'
+  if (!color) return label
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${CRITICIDAD_CLASS[value] || 'bg-sunken text-muted'}`}>
-      {CRITICIDAD_LABEL[value] || value || '—'}
+    <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: color, color: badgeInk(color) }}>
+      {label}
     </span>
   )
 }
 
-function CriticidadSelect({ value, onChange }) {
+function ColorSelect({ value, options, required, onChange }) {
   const [open, setOpen] = useState(false)
-  const options = ['alta', 'media', 'baja']
+  const selected = options.find((option) => optionValue(option) === value) || null
 
   return (
     <div className="relative">
@@ -84,25 +127,41 @@ function CriticidadSelect({ value, onChange }) {
         onClick={() => setOpen((current) => !current)}
         onBlur={() => setOpen(false)}
       >
-        <CriticidadBadge value={value} />
+        {selected ? <OptionBadge option={selected} /> : <span className="text-muted">Elegir</span>}
         <span className="text-muted" aria-hidden="true">▾</span>
       </button>
+      {required && <input className="sr-only" tabIndex={-1} value={value || ''} required onChange={() => {}} />}
       {open && (
-        <ul className="absolute z-10 mt-1 w-full rounded-lg border border-line bg-surface p-1 shadow-lg" role="listbox">
+        <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-line bg-surface p-1 shadow-lg" role="listbox">
+          {!required && (
+            <li>
+              <button
+                type="button"
+                className="flex w-full rounded-md px-2 py-1.5 text-sm text-muted hover:bg-sunken"
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  onChange('')
+                  setOpen(false)
+                }}
+              >
+                Elegir
+              </button>
+            </li>
+          )}
           {options.map((option) => (
-            <li key={option}>
+            <li key={optionValue(option)}>
               <button
                 type="button"
                 className="flex w-full rounded-md px-2 py-1.5 hover:bg-sunken"
                 role="option"
-                aria-selected={option === value}
+                aria-selected={optionValue(option) === value}
                 onMouseDown={(event) => {
                   event.preventDefault()
-                  onChange(option)
+                  onChange(optionValue(option))
                   setOpen(false)
                 }}
               >
-                <CriticidadBadge value={option} />
+                <OptionBadge option={option} />
               </button>
             </li>
           ))}
@@ -110,14 +169,6 @@ function CriticidadSelect({ value, onChange }) {
       )}
     </div>
   )
-}
-
-function optionValue(option) {
-  return option && typeof option === 'object' ? option.value : option
-}
-
-function optionLabel(option) {
-  return option && typeof option === 'object' ? (option.label || option.value) : option
 }
 
 function CustomFieldInput({ field, value, onChange }) {
@@ -130,24 +181,17 @@ function CustomFieldInput({ field, value, onChange }) {
       </label>
     )
   }
-  if (field.clave === 'criticidad') {
+  if (field.tipo === 'selector') {
     return (
       <div className="flex min-w-0 flex-col gap-1.5 text-sm font-medium text-muted">
         {label}
-        <CriticidadSelect value={value || 'media'} onChange={onChange} />
+        <ColorSelect
+          value={value || ''}
+          options={field.opciones || []}
+          required={field.requerido}
+          onChange={onChange}
+        />
       </div>
-    )
-  }
-  if (field.tipo === 'selector') {
-    return (
-      <Field label={label}>
-        <select className={controlClass} value={value || ''} required={field.requerido} onChange={(event) => onChange(event.target.value)}>
-          <option value="">Elegir</option>
-          {(field.opciones || []).map((option) => (
-            <option key={optionValue(option)} value={optionValue(option)}>{optionLabel(option)}</option>
-          ))}
-        </select>
-      </Field>
     )
   }
   const type = field.tipo === 'numero' ? 'number' : field.tipo === 'fecha' ? 'date' : 'text'
@@ -226,10 +270,13 @@ function ClientFormModal({ mode, initial, fields, onClose, onSubmit }) {
             {!migrated.has('documento') && <Field label={juridica ? 'CUIT' : 'DNI o CUIT'}>
               <input className={controlClass} value={form.documento} required inputMode="numeric" onChange={(event) => setField('documento', event.target.value)} />
             </Field>}
-            {!migrated.has('criticidad') && <div className="flex min-w-0 flex-col gap-1.5 text-sm font-medium text-muted">
-              Criticidad
-              <CriticidadSelect value={form.criticidad} onChange={(value) => setField('criticidad', value)} />
-            </div>}
+            {!migrated.has('criticidad') && <Field label="Criticidad">
+              <select className={controlClass} value={form.criticidad} onChange={(event) => setField('criticidad', event.target.value)}>
+                <option value="alta">Alta</option>
+                <option value="media">Media</option>
+                <option value="baja">Baja</option>
+              </select>
+            </Field>}
           </div>}
           {!migrated.has('razonSocial') && <Field label="Razón social">
             <input className={controlClass} value={form.razonSocial} autoFocus={juridica} required={juridica} onChange={(event) => setField('razonSocial', event.target.value)} />
@@ -392,7 +439,7 @@ function ImportModal({ onClose, onImported }) {
                     <td className="px-3 py-2">{clientName(row)}</td>
                     <td className="px-3 py-2">{row.documento || '—'}</td>
                     <td className="px-3 py-2">{row.tipo === 'juridica' ? 'Jurídica' : 'Física'}</td>
-                    <td className="px-3 py-2"><CriticidadBadge value={row.criticidad} /></td>
+                    <td className="px-3 py-2">{criticidadLabel(row.criticidad)}</td>
                     <td className={`px-3 py-2 ${row.errors.length ? 'text-chip-red-ink' : 'text-chip-emerald-ink'}`}>
                       {row.errors.length ? row.errors.join(' ') : 'Listo'}
                     </td>
@@ -415,6 +462,10 @@ function ClientsPage() {
   const [editor, setEditor] = useState(null)
   const [importing, setImporting] = useState(false)
   const [fields, setFields] = useState([])
+  const extraColumns = useMemo(
+    () => fields.filter((field) => !field.clave).slice().sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0)),
+    [fields],
+  )
   const [fieldsOpen, setFieldsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [tipo, setTipo] = useState('')
@@ -539,7 +590,7 @@ function ClientsPage() {
 
       {!loading && visible.length > 0 && (
         <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-          <table className="w-full min-w-[1080px] text-left text-sm">
+          <table className="w-full min-w-max text-left text-sm">
             <thead className="bg-sunken text-xs tracking-wide text-muted uppercase">
               <tr>
                 <th className="px-4 py-2 font-medium">Cliente</th>
@@ -550,6 +601,9 @@ function ClientsPage() {
                 <th className="px-4 py-2 font-medium">Teléfono</th>
                 <th className="px-4 py-2 font-medium">Representación</th>
                 <th className="px-4 py-2 font-medium">Criticidad</th>
+                {extraColumns.map((field) => (
+                  <th key={field.id} className="px-4 py-2 font-medium">{field.nombre}</th>
+                ))}
                 <th className="px-4 py-2 font-medium">Acciones</th>
               </tr>
             </thead>
@@ -557,13 +611,16 @@ function ClientsPage() {
               {visible.map((client) => (
                 <tr key={client.id} className="border-t border-line">
                   <td className="px-4 py-3 font-medium text-ink">{clientName(client)}</td>
-                  <td className="px-4 py-3 text-muted">{client.tipo === 'juridica' ? 'Jurídica' : 'Física'}</td>
+                  <td className="px-4 py-3 text-muted">{claveCell(fields, 'tipo', client.tipo, client.tipo === 'juridica' ? 'Jurídica' : 'Física')}</td>
                   <td className="px-4 py-3 text-muted">{client.documento}</td>
                   <td className="px-4 py-3 text-muted">{client.razonSocial || '—'}</td>
                   <td className="px-4 py-3 text-muted">{client.email || '—'}</td>
                   <td className="px-4 py-3 text-muted">{client.telefono || '—'}</td>
                   <td className="px-4 py-3 text-muted">{representacionLabel(client)}</td>
-                  <td className="px-4 py-3"><CriticidadBadge value={client.criticidad} /></td>
+                  <td className="px-4 py-3 text-muted">{claveCell(fields, 'criticidad', client.criticidad, criticidadLabel(client.criticidad))}</td>
+                  {extraColumns.map((field) => (
+                    <td key={field.id} className="px-4 py-3 text-muted">{fieldCell(field, client)}</td>
+                  ))}
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <Button

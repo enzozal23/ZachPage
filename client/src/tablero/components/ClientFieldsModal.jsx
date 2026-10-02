@@ -11,12 +11,62 @@ import { Button } from './ui/Button.jsx'
 import { Field } from './ui/Field.jsx'
 import { controlClass } from './ui/styles.js'
 
-const EMPTY = { nombre: '', tipo: 'texto', orden: 1, requerido: false, opciones: '' }
+const EMPTY = { nombre: '', tipo: 'texto', orden: 1, requerido: false, opciones: [] }
+const SUGGESTED_COLORS = { alta: '#dc2626', media: '#d97706', baja: '#059669' }
 const TYPE_LABEL = { texto: 'Texto', numero: 'Número', fecha: 'Fecha', checkbox: 'Checkbox', selector: 'Selector' }
+const BUILTIN_CLAVES = ['tipo', 'nombre', 'apellido', 'documento', 'razonSocial', 'email', 'telefono', 'criticidad', 'poder', 'patrocinio']
 
 function readError(error, fallback) {
   const message = error.response?.data?.message
   return typeof message === 'string' && message.trim() ? message : fallback
+}
+
+function OptionEditor({ options, locked, onChange }) {
+  function update(index, patch) {
+    onChange(options.map((option, current) => (current === index ? { ...option, ...patch } : option)))
+  }
+
+  return (
+    <div className="flex flex-col gap-2 sm:col-span-2">
+      <span className="text-sm font-medium text-muted">Opciones</span>
+      {options.map((option, index) => (
+        <div key={`${option.value || 'nueva'}-${index}`} className="flex flex-wrap items-center gap-2">
+          <input
+            className={`${controlClass} min-w-40 flex-1`}
+            value={option.label}
+            placeholder="Nombre de la opción"
+            required={!locked}
+            disabled={locked}
+            onChange={(event) => update(index, { label: event.target.value })}
+          />
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={Boolean(option.color)}
+              onChange={(event) => update(index, { color: event.target.checked ? (SUGGESTED_COLORS[option.value] || '#64748b') : '' })}
+            />
+            Color
+          </label>
+          {option.color ? (
+            <input
+              type="color"
+              aria-label={`Color de ${option.label || 'opción'}`}
+              value={option.color}
+              onChange={(event) => update(index, { color: event.target.value })}
+            />
+          ) : null}
+          {!locked && options.length > 1 && (
+            <Button type="button" variant="secondary" size="sm" onClick={() => onChange(options.filter((_, current) => current !== index))}>Quitar</Button>
+          )}
+        </div>
+      ))}
+      {!locked && (
+        <div>
+          <Button type="button" variant="secondary" onClick={() => onChange([...options, { label: '', value: '', color: '' }])}>Agregar opción</Button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function ClientFieldsModal({ onClose, onChange }) {
@@ -27,12 +77,15 @@ function ClientFieldsModal({ onClose, onChange }) {
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [ready, setReady] = useState(false)
+  const pendingMigration = BUILTIN_CLAVES.some((clave) => !fields.some((field) => field.clave === clave))
 
   async function load() {
     const res = await listClientFieldsRequest()
     const next = Array.isArray(res.data) ? res.data : []
     setFields(next)
     onChange(next)
+    setReady(true)
   }
 
   useEffect(() => {
@@ -52,7 +105,11 @@ function ClientFieldsModal({ onClose, onChange }) {
       tipo: field.tipo,
       orden: field.orden,
       requerido: field.requerido,
-      opciones: (field.opciones || []).map((option) => option.label || option.value || option).join(', '),
+      opciones: (field.opciones || []).map((option) => ({
+        value: option.value || option,
+        label: option.label || option.value || option,
+        color: option.color || '',
+      })),
       clave: field.clave || '',
     })
     setEditor({ mode: 'edit', id: field.id })
@@ -68,7 +125,13 @@ function ClientFieldsModal({ onClose, onChange }) {
       tipo: form.tipo,
       orden: Number(form.orden),
       requerido: Boolean(form.requerido),
-      opciones: form.opciones,
+      opciones: form.tipo === 'selector'
+        ? (form.opciones || []).map((option) => ({
+          value: form.clave ? option.value : String(option.label || '').trim(),
+          label: String(option.label || '').trim(),
+          color: option.color || '',
+        })).filter((option) => option.value || option.label)
+        : [],
     }
     try {
       if (editor?.mode === 'edit') await updateClientFieldRequest(editor.id, payload)
@@ -131,7 +194,7 @@ function ClientFieldsModal({ onClose, onChange }) {
         <header className="mb-4 flex items-center justify-between gap-3">
           <h3 id={titleId} className="text-lg font-semibold text-ink">Campos configurables</h3>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={handleMigrate} disabled={saving}>Migrar campos actuales</Button>
+            <Button variant="secondary" onClick={handleMigrate} disabled={saving || !ready || !pendingMigration} title={pendingMigration ? undefined : 'Los campos actuales ya están migrados'}>Migrar campos actuales</Button>
             <Button onClick={openCreate}>Nuevo campo</Button>
             <Button variant="secondary" onClick={onClose}>Cerrar</Button>
           </div>
@@ -182,7 +245,16 @@ function ClientFieldsModal({ onClose, onChange }) {
               <input className={controlClass} value={form.nombre} required autoFocus onChange={(event) => setForm((current) => ({ ...current, nombre: event.target.value }))} />
             </Field>
             <Field label="Tipo">
-              <select className={controlClass} value={form.tipo} disabled={Boolean(form.clave)} onChange={(event) => setForm((current) => ({ ...current, tipo: event.target.value }))}>
+              <select className={controlClass} value={form.tipo} disabled={Boolean(form.clave)} onChange={(event) => {
+                const tipo = event.target.value
+                setForm((current) => ({
+                  ...current,
+                  tipo,
+                  opciones: tipo === 'selector' && (!Array.isArray(current.opciones) || current.opciones.length === 0)
+                    ? [{ label: '', value: '', color: '' }]
+                    : current.opciones,
+                }))
+              }}>
                 <option value="texto">Texto</option>
                 <option value="numero">Número</option>
                 <option value="fecha">Fecha</option>
@@ -197,10 +269,12 @@ function ClientFieldsModal({ onClose, onChange }) {
               <input type="checkbox" checked={Boolean(form.requerido)} onChange={(event) => setForm((current) => ({ ...current, requerido: event.target.checked }))} />
               Requerido
             </label>
-            {form.tipo === 'selector' && !form.clave && (
-              <Field className="sm:col-span-2" label="Opciones">
-                <input className={controlClass} value={form.opciones} placeholder="Separadas por coma" onChange={(event) => setForm((current) => ({ ...current, opciones: event.target.value }))} />
-              </Field>
+            {form.tipo === 'selector' && (
+              <OptionEditor
+                options={Array.isArray(form.opciones) ? form.opciones : []}
+                locked={Boolean(form.clave)}
+                onChange={(opciones) => setForm((current) => ({ ...current, opciones }))}
+              />
             )}
             <div className="flex justify-end gap-2 sm:col-span-2">
               <Button variant="secondary" onClick={() => setEditor(null)}>Cancelar</Button>
