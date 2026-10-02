@@ -42,6 +42,18 @@ const clientSchema = new Schema({
     enum: ['alta', 'media', 'baja'],
     default: 'media',
   },
+  poder: {
+    type: Boolean,
+    default: false,
+  },
+  patrocinio: {
+    type: Boolean,
+    default: false,
+  },
+  extras: {
+    type: Schema.Types.Mixed,
+    default: () => ({}),
+  },
 }, { timestamps: true })
 
 export default model('Client', clientSchema)

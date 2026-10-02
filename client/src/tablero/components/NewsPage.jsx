@@ -1,5 +1,34 @@
 const RELEASES = [
   {
+    date: '2 de octubre de 2026',
+    groups: [
+      {
+        title: 'Clientes',
+        items: [
+          'Cada cliente tiene representación: Poder y Patrocinio. Los dos pueden estar marcados a la vez.',
+          'Hay un botón Campos configurables para crear los datos del cliente: nombre, tipo (texto, número, fecha, checkbox o selector), orden y si es requerido. En un selector las opciones se cargan separadas por coma.',
+          'Los campos que ya existían se pueden migrar a campos configurables. Los clientes con datos reales conservan nombre, documento, mail, teléfono, criticidad y el resto.',
+          'Se pueden exportar los clientes a Excel.',
+        ],
+      },
+      {
+        title: 'Ficha',
+        items: [
+          'La ficha tiene un campo Cliente. Una o más tarjetas pueden quedar asociadas al mismo cliente.',
+          'La tarjeta muestra el nombre del cliente cuando está asociado.',
+        ],
+      },
+      {
+        title: 'Logs',
+        items: [
+          'Crear, editar o eliminar un cliente queda en los logs de acciones, con el dato que cambió: mail, teléfono, poder, patrocinio y cada campo configurable.',
+          'Crear, editar o eliminar un campo configurable también queda registrado, con el nombre, el tipo, el orden, si es requerido y las opciones.',
+          'Migrar los campos actuales, importar desde Excel y exportar a Excel quedan en el log. La exportación dice cuántos clientes se descargaron.',
+        ],
+      },
+    ],
+  },
+  {
     date: '1 de octubre de 2026',
     groups: [
       {

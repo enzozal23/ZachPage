@@ -313,6 +313,8 @@ export function useKanbanStore(enabled = false) {
         labels: data.labels || [],
         dueDate: data.dueDate || '',
         expediente: String(data.expediente || '').trim(),
+        clientId: String(data.clientId || '').trim(),
+        clientName: String(data.clientName || '').trim(),
         task: '',
         tasks: Array.isArray(data.tasks) ? data.tasks : [],
         createdAt: new Date().toISOString(),

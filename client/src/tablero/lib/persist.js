@@ -49,6 +49,8 @@ export function unpackTicket(ticket) {
   return {
     ...ticket,
     expediente: resolveExpediente(ticket, extra),
+    clientId: String(ticket?.clientId || extra?.clientId || '').trim(),
+    clientName: String(ticket?.clientName || extra?.clientName || '').trim(),
     importId: String(ticket?.importId || extra?.importId || '').trim(),
     labels: visibleLabels(ticket?.labels),
     ...(tasks ? { tasks } : {}),
@@ -101,6 +103,8 @@ export function packTicket(ticket, imports) {
     comments: Array.isArray(ticket.comments) ? ticket.comments : [],
     tasks,
     expediente,
+    clientId: String(ticket.clientId || '').trim(),
+    clientName: String(ticket.clientName || '').trim(),
     importId: String(ticket.importId || '').trim(),
     ...(imports ? { imports } : {}),
   }

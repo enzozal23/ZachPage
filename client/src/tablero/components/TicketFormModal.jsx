@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { listClientsRequest } from '../../api/clients.js'
+import { clientName } from '../lib/clientExcel.js'
 import { COLUMNS, PRIORITIES, DEFAULT_PRIORITY, ticketColumnId } from '../constants/columns.js'
 import AssigneeSelect from './AssigneeSelect.jsx'
 import { Button } from './ui/Button.jsx'
@@ -20,6 +22,7 @@ function buildInitialForm(ticket, initialStatus) {
       labels: visibleLabels(ticket.labels).join(', '),
       dueDate: ticket.dueDate || '',
       expediente: resolveExpediente(ticket),
+      clientId: ticket.clientId || '',
     }
   }
   return {
@@ -32,6 +35,7 @@ function buildInitialForm(ticket, initialStatus) {
     labels: '',
     dueDate: '',
     expediente: '',
+    clientId: '',
   }
 }
 
@@ -58,9 +62,24 @@ function TicketFormModal({
   const [comment, setComment] = useState('')
   const [draftTasks, setDraftTasks] = useState([])
   const [taskDraft, setTaskDraft] = useState('')
+  const [clients, setClients] = useState([])
   const comments = ticket?.comments || []
   const tasks = ticket ? ticketTasks(ticket) : draftTasks
   const tasksDone = tasks.filter((task) => task.done).length
+
+  useEffect(() => {
+    let active = true
+    listClientsRequest()
+      .then((res) => {
+        if (active) setClients(Array.isArray(res.data) ? res.data : [])
+      })
+      .catch(() => {
+        if (active) setClients([])
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   function handleChange(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -73,6 +92,7 @@ function TicketFormModal({
       setError('El título es obligatorio.')
       return
     }
+    const selectedClient = clients.find((client) => client.id === form.clientId)
     onSave({
       title,
       description: form.description,
@@ -86,6 +106,8 @@ function TicketFormModal({
         .filter(Boolean),
       dueDate: form.dueDate,
       expediente: form.expediente.trim(),
+      clientId: form.clientId,
+      clientName: form.clientId ? (selectedClient ? clientName(selectedClient) : (ticket?.clientName || '')) : '',
       ...(ticket ? {} : { tasks: draftTasks }),
     })
   }
@@ -237,6 +259,22 @@ function TicketFormModal({
           </section>
 
           <aside className="flex h-full min-h-0 flex-col gap-4">
+            <label className={sideLabel}>
+              <span>Cliente</span>
+              <select
+                className={controlClass}
+                value={form.clientId}
+                onChange={(event) => handleChange('clientId', event.target.value)}
+              >
+                <option value="">Sin cliente</option>
+                {form.clientId && !clients.some((client) => client.id === form.clientId) && (
+                  <option value={form.clientId}>{ticket?.clientName || 'Cliente asociado'}</option>
+                )}
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>{clientName(client)}</option>
+                ))}
+              </select>
+            </label>
             <label className={sideLabel}>
               <span>N° expediente</span>
               <input

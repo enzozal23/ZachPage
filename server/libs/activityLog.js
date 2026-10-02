@@ -85,6 +85,13 @@ export function ticketChanges(before, after) {
       after: after.dueDate || '',
     })
   }
+  if ((before.clientId || '') !== (after.clientId || '')) {
+    push('update', `Actualizó el cliente: ${quote(before.clientName)} → ${quote(after.clientName)}`, {
+      field: 'clientId',
+      before: before.clientId || '',
+      after: after.clientId || '',
+    })
+  }
   if ((before.expediente || '') !== (after.expediente || '')) {
     push('update', `Actualizó el N° de expediente: ${quote(before.expediente)} → ${quote(after.expediente)}`, {
       field: 'expediente',

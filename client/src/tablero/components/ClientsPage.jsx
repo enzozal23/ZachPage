@@ -3,11 +3,14 @@ import {
   createClientRequest,
   deleteClientRequest,
   importClientsRequest,
+  listClientFieldsRequest,
   listClientsRequest,
+  logClientsExportRequest,
   updateClientRequest,
 } from '../../api/clients.js'
+import ClientFieldsModal from './ClientFieldsModal.jsx'
 import { confirmDialog } from '../lib/dialog.js'
-import { clientName, downloadClientTemplate, parseClientWorkbook } from '../lib/clientExcel.js'
+import { clientName, downloadClientsExcel, downloadClientTemplate, parseClientWorkbook } from '../lib/clientExcel.js'
 import { Button } from './ui/Button.jsx'
 import { Field } from './ui/Field.jsx'
 import { controlClass } from './ui/styles.js'
@@ -21,6 +24,9 @@ const EMPTY_FORM = {
   email: '',
   telefono: '',
   criticidad: 'media',
+  poder: false,
+  patrocinio: false,
+  extras: {},
 }
 
 const CRITICIDAD_CLASS = {
@@ -30,6 +36,24 @@ const CRITICIDAD_CLASS = {
 }
 
 const CRITICIDAD_LABEL = { alta: 'Alta', media: 'Media', baja: 'Baja' }
+
+function clientFormInitial(client, fields) {
+  const extras = { ...(client?.extras || {}) }
+  for (const field of fields || []) {
+    if (!field.clave) continue
+    if (!Object.prototype.hasOwnProperty.call(extras, field.id) || extras[field.id] === undefined || extras[field.id] === null) {
+      extras[field.id] = field.tipo === 'checkbox' ? Boolean(client?.[field.clave]) : (client?.[field.clave] ?? '')
+    }
+  }
+  return { ...EMPTY_FORM, ...client, extras }
+}
+
+function representacionLabel(client) {
+  const parts = []
+  if (client?.poder) parts.push('Poder')
+  if (client?.patrocinio) parts.push('Patrocinio')
+  return parts.join(', ') || '—'
+}
 
 function readError(error, fallback) {
   const data = error.response?.data
@@ -88,12 +112,59 @@ function CriticidadSelect({ value, onChange }) {
   )
 }
 
-function ClientFormModal({ mode, initial, onClose, onSubmit }) {
+function optionValue(option) {
+  return option && typeof option === 'object' ? option.value : option
+}
+
+function optionLabel(option) {
+  return option && typeof option === 'object' ? (option.label || option.value) : option
+}
+
+function CustomFieldInput({ field, value, onChange }) {
+  const label = field.requerido ? `${field.nombre} *` : field.nombre
+  if (field.tipo === 'checkbox') {
+    return (
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} />
+        {label}
+      </label>
+    )
+  }
+  if (field.clave === 'criticidad') {
+    return (
+      <div className="flex min-w-0 flex-col gap-1.5 text-sm font-medium text-muted">
+        {label}
+        <CriticidadSelect value={value || 'media'} onChange={onChange} />
+      </div>
+    )
+  }
+  if (field.tipo === 'selector') {
+    return (
+      <Field label={label}>
+        <select className={controlClass} value={value || ''} required={field.requerido} onChange={(event) => onChange(event.target.value)}>
+          <option value="">Elegir</option>
+          {(field.opciones || []).map((option) => (
+            <option key={optionValue(option)} value={optionValue(option)}>{optionLabel(option)}</option>
+          ))}
+        </select>
+      </Field>
+    )
+  }
+  const type = field.tipo === 'numero' ? 'number' : field.tipo === 'fecha' ? 'date' : 'text'
+  return (
+    <Field label={label}>
+      <input className={controlClass} type={type} value={value ?? ''} required={field.requerido} onChange={(event) => onChange(event.target.value)} />
+    </Field>
+  )
+}
+
+function ClientFormModal({ mode, initial, fields, onClose, onSubmit }) {
   const titleId = useId()
   const [form, setForm] = useState(initial)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const juridica = form.tipo === 'juridica'
+  const migrated = new Set(fields.filter((field) => field.clave).map((field) => field.clave))
 
   function setField(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -113,6 +184,9 @@ function ClientFormModal({ mode, initial, onClose, onSubmit }) {
         email: form.email.trim(),
         telefono: form.telefono.trim(),
         criticidad: form.criticidad,
+        poder: Boolean(form.poder),
+        patrocinio: Boolean(form.patrocinio),
+        extras: form.extras || {},
       })
     } catch (err) {
       setError(readError(err, 'No se pudo guardar el cliente.'))
@@ -134,40 +208,77 @@ function ClientFormModal({ mode, initial, onClose, onSubmit }) {
           <Button variant="secondary" onClick={onClose}>Cerrar</Button>
         </header>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <Field label="Tipo">
+          {!migrated.has('tipo') && <Field label="Tipo">
             <select className={controlClass} value={form.tipo} onChange={(event) => setField('tipo', event.target.value)}>
               <option value="fisica">Persona física</option>
               <option value="juridica">Persona jurídica</option>
             </select>
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={juridica ? 'Nombre de contacto' : 'Nombre'}>
+          </Field>}
+          {(!migrated.has('nombre') || !migrated.has('apellido')) && <div className="grid gap-4 sm:grid-cols-2">
+            {!migrated.has('nombre') && <Field label={juridica ? 'Nombre de contacto' : 'Nombre'}>
               <input className={controlClass} value={form.nombre} autoFocus={!juridica} required={!juridica} onChange={(event) => setField('nombre', event.target.value)} />
-            </Field>
-            <Field label={juridica ? 'Apellido de contacto' : 'Apellido'}>
+            </Field>}
+            {!migrated.has('apellido') && <Field label={juridica ? 'Apellido de contacto' : 'Apellido'}>
               <input className={controlClass} value={form.apellido} required={!juridica} onChange={(event) => setField('apellido', event.target.value)} />
-            </Field>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={juridica ? 'CUIT' : 'DNI o CUIT'}>
+            </Field>}
+          </div>}
+          {(!migrated.has('documento') || !migrated.has('criticidad')) && <div className="grid gap-4 sm:grid-cols-2">
+            {!migrated.has('documento') && <Field label={juridica ? 'CUIT' : 'DNI o CUIT'}>
               <input className={controlClass} value={form.documento} required inputMode="numeric" onChange={(event) => setField('documento', event.target.value)} />
-            </Field>
-            <div className="flex min-w-0 flex-col gap-1.5 text-sm font-medium text-muted">
+            </Field>}
+            {!migrated.has('criticidad') && <div className="flex min-w-0 flex-col gap-1.5 text-sm font-medium text-muted">
               Criticidad
               <CriticidadSelect value={form.criticidad} onChange={(value) => setField('criticidad', value)} />
-            </div>
-          </div>
-          <Field label="Razón social">
+            </div>}
+          </div>}
+          {!migrated.has('razonSocial') && <Field label="Razón social">
             <input className={controlClass} value={form.razonSocial} autoFocus={juridica} required={juridica} onChange={(event) => setField('razonSocial', event.target.value)} />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Mail">
+          </Field>}
+          {(!migrated.has('poder') || !migrated.has('patrocinio')) && <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-muted">Representación</legend>
+            <div className="flex flex-wrap gap-4">
+              {!migrated.has('poder') && <label className="flex items-center gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.poder)}
+                  onChange={(event) => setField('poder', event.target.checked)}
+                />
+                Poder
+              </label>}
+              {!migrated.has('patrocinio') && <label className="flex items-center gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.patrocinio)}
+                  onChange={(event) => setField('patrocinio', event.target.checked)}
+                />
+                Patrocinio
+              </label>}
+            </div>
+          </fieldset>}
+          {fields.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {fields.map((field) => (
+                <CustomFieldInput
+                  key={field.id}
+                  field={field}
+                  value={(form.extras || {})[field.id]}
+                  onChange={(value) => setForm((current) => ({
+                    ...current,
+                    ...(field.clave ? { [field.clave]: value } : {}),
+                    extras: { ...(current.extras || {}), [field.id]: value },
+                  }))}
+                />
+              ))}
+            </div>
+          )}
+          {(!migrated.has('email') || !migrated.has('telefono')) && <div className="grid gap-4 sm:grid-cols-2">
+            {!migrated.has('email') && <Field label="Mail">
               <input className={controlClass} type="email" value={form.email} autoComplete="off" onChange={(event) => setField('email', event.target.value)} />
-            </Field>
-            <Field label="Teléfono">
+            </Field>}
+            {!migrated.has('telefono') && <Field label="Teléfono">
               <input className={controlClass} type="tel" value={form.telefono} inputMode="tel" onChange={(event) => setField('telefono', event.target.value)} />
-            </Field>
-          </div>
+            </Field>}
+          </div>}
           {error && <p className="rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={onClose}>Cancelar</Button>
@@ -218,6 +329,8 @@ function ImportModal({ onClose, onImported }) {
         email: row.email,
         telefono: row.telefono,
         criticidad: row.criticidad,
+        poder: row.poder,
+        patrocinio: row.patrocinio,
       })))
       setResult(res.data)
       await onImported()
@@ -251,7 +364,7 @@ function ImportModal({ onClose, onImported }) {
             {saving ? 'Importando…' : `Importar ${valid.length || ''}`.trim()}
           </Button>
         </div>
-        <p className="mt-3 text-sm text-muted">Columnas: Nombre, Apellido, DNI o CUIT, Razón social, Mail, Teléfono, Tipo (Física o Jurídica) y Criticidad (Alta, Media o Baja). Si el documento ya existe, se actualiza.</p>
+        <p className="mt-3 text-sm text-muted">Columnas: Nombre, Apellido, DNI o CUIT, Razón social, Mail, Teléfono, Tipo (Física o Jurídica), Criticidad (Alta, Media o Baja), Poder y Patrocinio (Sí o No). Si el documento ya existe, se actualiza.</p>
         {fileError && <p className="mt-3 rounded-lg bg-chip-red px-3 py-2 text-sm text-chip-red-ink" role="alert">{fileError}</p>}
         {result && (
           <p className="mt-3 rounded-lg bg-chip-emerald px-3 py-2 text-sm text-chip-emerald-ink" role="status">
@@ -301,6 +414,8 @@ function ClientsPage() {
   const [notice, setNotice] = useState(null)
   const [editor, setEditor] = useState(null)
   const [importing, setImporting] = useState(false)
+  const [fields, setFields] = useState([])
+  const [fieldsOpen, setFieldsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [tipo, setTipo] = useState('')
   const [criticidad, setCriticidad] = useState('')
@@ -320,6 +435,9 @@ function ClientsPage() {
 
   useEffect(() => {
     load()
+    listClientFieldsRequest()
+      .then((res) => setFields(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setFields([]))
   }, [load])
 
   const visible = useMemo(() => {
@@ -373,7 +491,16 @@ function ClientsPage() {
           <p className="mt-1 text-sm text-muted">Alta manual o importación desde Excel.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => setFieldsOpen(true)}>Campos configurables</Button>
           <Button variant="secondary" onClick={() => setImporting(true)}>Importar Excel</Button>
+          <Button variant="secondary" onClick={async () => {
+            try {
+              await logClientsExportRequest(clients.length)
+            } catch {
+              // la descarga sigue aunque el log no se haya guardado
+            }
+            downloadClientsExcel(clients, fields)
+          }}>Exportar Excel</Button>
           <Button onClick={() => setEditor({ mode: 'create' })}>Nuevo cliente</Button>
         </div>
       </div>
@@ -421,6 +548,7 @@ function ClientsPage() {
                 <th className="px-4 py-2 font-medium">Razón social</th>
                 <th className="px-4 py-2 font-medium">Mail</th>
                 <th className="px-4 py-2 font-medium">Teléfono</th>
+                <th className="px-4 py-2 font-medium">Representación</th>
                 <th className="px-4 py-2 font-medium">Criticidad</th>
                 <th className="px-4 py-2 font-medium">Acciones</th>
               </tr>
@@ -434,6 +562,7 @@ function ClientsPage() {
                   <td className="px-4 py-3 text-muted">{client.razonSocial || '—'}</td>
                   <td className="px-4 py-3 text-muted">{client.email || '—'}</td>
                   <td className="px-4 py-3 text-muted">{client.telefono || '—'}</td>
+                  <td className="px-4 py-3 text-muted">{representacionLabel(client)}</td>
                   <td className="px-4 py-3"><CriticidadBadge value={client.criticidad} /></td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
@@ -457,10 +586,14 @@ function ClientsPage() {
       {editor && (
         <ClientFormModal
           mode={editor.mode}
-          initial={editor.mode === 'edit' ? { ...EMPTY_FORM, ...editor.client } : EMPTY_FORM}
+          initial={editor.mode === 'edit' ? clientFormInitial(editor.client, fields) : EMPTY_FORM}
+          fields={fields}
           onClose={() => setEditor(null)}
           onSubmit={handleSubmit}
         />
+      )}
+      {fieldsOpen && (
+        <ClientFieldsModal onClose={() => { setFieldsOpen(false); load() }} onChange={setFields} />
       )}
       {importing && (
         <ImportModal

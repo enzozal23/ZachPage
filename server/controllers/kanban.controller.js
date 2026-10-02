@@ -109,6 +109,8 @@ function publicTicket(ticket) {
     labels,
     dueDate: ticket.dueDate || '',
     expediente,
+    clientId: String(ticket.clientId || extra?.clientId || '').trim(),
+    clientName: String(ticket.clientName || extra?.clientName || '').trim(),
     task: pending,
     tasks,
     createdAt: ticket.createdAt || '',

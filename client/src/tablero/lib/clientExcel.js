@@ -27,6 +27,8 @@ const HEADER_FIELDS = {
   persona: 'tipo',
   personeria: 'tipo',
   tipopersona: 'tipo',
+  poder: 'poder',
+  patrocinio: 'patrocinio',
   criticidad: 'criticidad',
   nivel: 'criticidad',
   niveldecriticidad: 'criticidad',
@@ -91,20 +93,67 @@ export function validateClient(input) {
   if (tipo === 'fisica' && !nombre) errors.push('Falta el nombre.')
   if (tipo === 'fisica' && !apellido) errors.push('Falta el apellido.')
   if (tipo === 'juridica' && !razonSocial) errors.push('Falta la razón social.')
-  return {
-    value: { tipo, nombre, apellido, documento, razonSocial, email, telefono, criticidad },
-    errors,
+  const value = { tipo, nombre, apellido, documento, razonSocial, email, telefono, criticidad }
+  if (input?.poder !== undefined) value.poder = Boolean(input.poder)
+  if (input?.patrocinio !== undefined) value.patrocinio = Boolean(input.patrocinio)
+  return { value, errors }
+}
+
+function yesNo(value) {
+  return value ? 'Sí' : 'No'
+}
+
+function tipoLabel(tipo) {
+  return tipo === 'juridica' ? 'Jurídica' : 'Física'
+}
+
+function criticidadLabel(value) {
+  if (value === 'alta') return 'Alta'
+  if (value === 'baja') return 'Baja'
+  return 'Media'
+}
+
+function extraCell(field, client) {
+  const value = client.extras?.[field.id]
+  if (field.tipo === 'checkbox') return yesNo(value)
+  if (field.tipo === 'selector') {
+    const option = (field.opciones || []).find((item) => (item?.value || item) === value)
+    return option?.label || value || ''
   }
+  return value ?? ''
+}
+
+export function downloadClientsExcel(clients, fields = []) {
+  const extras = (fields || []).filter((field) => !field.clave)
+  const headers = ['Nombre', 'Apellido', 'DNI o CUIT', 'Razón social', 'Mail', 'Teléfono', 'Tipo', 'Criticidad', 'Poder', 'Patrocinio', ...extras.map((field) => field.nombre)]
+  const rows = (clients || []).map((client) => [
+    client.nombre || '',
+    client.apellido || '',
+    client.documento || '',
+    client.razonSocial || '',
+    client.email || '',
+    client.telefono || '',
+    tipoLabel(client.tipo),
+    criticidadLabel(client.criticidad),
+    yesNo(client.poder),
+    yesNo(client.patrocinio),
+    ...extras.map((field) => extraCell(field, client)),
+  ])
+  const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+  sheet['!cols'] = headers.map((header) => ({ wch: Math.max(14, String(header).length + 2) }))
+  const book = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(book, sheet, 'Clientes')
+  XLSX.writeFile(book, 'clientes.xlsx')
 }
 
 export function downloadClientTemplate() {
   const rows = [
-    ['Nombre', 'Apellido', 'DNI o CUIT', 'Razón social', 'Mail', 'Teléfono', 'Tipo', 'Criticidad'],
-    ['Ana', 'Pérez', '30123456', '', 'ana@correo.com', '11 5555 0101', 'Física', 'Baja'],
-    ['', '', '30712345678', 'Estudio Norte SA', 'contacto@estudionorte.com', '11 4444 0202', 'Jurídica', 'Alta'],
+    ['Nombre', 'Apellido', 'DNI o CUIT', 'Razón social', 'Mail', 'Teléfono', 'Tipo', 'Criticidad', 'Poder', 'Patrocinio'],
+    ['Ana', 'Pérez', '30123456', '', 'ana@correo.com', '11 5555 0101', 'Física', 'Baja', 'Sí', 'No'],
+    ['', '', '30712345678', 'Estudio Norte SA', 'contacto@estudionorte.com', '11 4444 0202', 'Jurídica', 'Alta', 'Sí', 'Sí'],
   ]
   const sheet = XLSX.utils.aoa_to_sheet(rows)
-  sheet['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 28 }, { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 14 }]
+  sheet['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 28 }, { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 14 }]
   const book = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(book, sheet, 'Clientes')
   XLSX.writeFile(book, 'modelo-clientes.xlsx')
@@ -135,6 +184,9 @@ export function parseClientWorkbook(buffer) {
       .every((field) => columns[field] === undefined || !read(field))
     if (blank) continue
     const tipo = normalizeTipo(read('tipo')) || (read('razonSocial') && !read('nombre') ? 'juridica' : 'fisica')
+    const flag = (field) => ['si', 's', '1', 'true', 'x', 'yes'].includes(
+      read(field).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(),
+    )
     const { value, errors } = validateClient({
       tipo,
       nombre: read('nombre'),
@@ -144,6 +196,8 @@ export function parseClientWorkbook(buffer) {
       email: read('email'),
       telefono: read('telefono'),
       criticidad: read('criticidad') || 'media',
+      ...(columns.poder !== undefined ? { poder: flag('poder') } : {}),
+      ...(columns.patrocinio !== undefined ? { patrocinio: flag('patrocinio') } : {}),
     })
     if (value.documento && seen.has(value.documento)) errors.push('Ese DNI o CUIT está repetido en el archivo.')
     if (value.documento) seen.add(value.documento)

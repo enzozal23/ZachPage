@@ -33,6 +33,8 @@ const ticketSchema = new Schema({
   labels: [String],
   dueDate: String,
   expediente: String,
+  clientId: String,
+  clientName: String,
   task: String,
   tasks: [taskItemSchema],
   createdAt: String,

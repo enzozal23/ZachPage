@@ -161,6 +161,12 @@ function TicketCard({ ticket, onEdit, onDelete }) {
       )}
 
       <dl className="flex flex-col gap-1 text-sm">
+        {ticket.clientName && (
+          <div>
+            <dt className="text-[0.7rem] tracking-wide text-muted uppercase">Cliente</dt>
+            <dd className="text-muted">{ticket.clientName}</dd>
+          </div>
+        )}
         <div>
           <dt className="text-[0.7rem] tracking-wide text-muted uppercase">Asignado</dt>
           <dd className="text-muted">{assignees.join(', ') || 'Sin asignar'}</dd>
