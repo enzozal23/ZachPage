@@ -261,6 +261,7 @@ export const saveKanban = async (req, res) => {
     return res.status(400).json({ message: 'Tiene que haber al menos un tablero.' })
   }
 
+  try {
   let doc = await Kanban.findOne()
   const previousStored = doc?.tickets || []
   const previousRaw = previousStored.map(publicTicket)
@@ -289,16 +290,11 @@ export const saveKanban = async (req, res) => {
   })
   if (faltante) return res.status(403).json({ message: 'No tenés permiso para esto.' })
 
-  if (!doc) doc = new Kanban({ boards, tickets, imports })
-  else {
-    doc.boards = boards
-    doc.tickets = tickets
-    doc.imports = imports
-    doc.markModified('tickets')
-    doc.markModified('imports')
-  }
-
-  await doc.save()
+  const saved = doc
+    ? await Kanban.findByIdAndUpdate(doc._id, { $set: { boards, tickets, imports } }, { new: true })
+    : await Kanban.create({ boards, tickets, imports })
+  if (!saved) return res.status(500).json({ message: 'No se pudo guardar en el servidor.' })
+  doc = saved
   await logInfo('Tablero guardado', { boards: boards.length, tickets: tickets.length, imports: imports.length })
 
   const userDoc = req.user?.id ? await User.findById(req.user.id).select('username email') : null
@@ -330,6 +326,65 @@ export const saveKanban = async (req, res) => {
     imports: (doc.imports || []).map(publicImport),
     botones: await botonesKanban(req),
   })
+  } catch (error) {
+    console.error(error)
+    await logError('No se pudo guardar el tablero', error, {})
+    if (!res.headersSent) res.status(500).json({ message: 'No se pudo guardar en el servidor.' })
+  }
+}
+
+export const importKanbanWord = async (req, res) => {
+  const incoming = Array.isArray(req.body?.tickets) ? req.body.tickets : []
+  const entry = req.body?.import && req.body.import.id ? publicImport(req.body.import) : null
+  if (!incoming.length && !entry) {
+    return res.status(400).json({ message: 'La importación no trae tarjetas.' })
+  }
+
+  try {
+    const doc = await Kanban.findOne()
+    if (!doc) return res.status(400).json({ message: 'Todavía no hay un tablero guardado.' })
+
+    const existingIds = new Set((doc.tickets || []).map((ticket) => ticket.id))
+    const added = incoming
+      .map((ticket) => ({ ...publicTicket(ticket), reminderSentFor: '' }))
+      .filter((ticket) => ticket.id && !existingIds.has(ticket.id))
+    const existingImports = new Set((doc.imports || []).map((item) => item.id))
+    const push = {}
+    if (added.length) push.tickets = { $each: added }
+    if (entry?.id && !existingImports.has(entry.id)) push.imports = { $each: [entry], $position: 0 }
+
+    const saved = Object.keys(push).length
+      ? await Kanban.findByIdAndUpdate(doc._id, { $push: push }, { new: true })
+      : doc
+    if (!saved) return res.status(500).json({ message: 'No se pudo guardar en el servidor.' })
+
+    const previousRaw = (doc.tickets || []).map(publicTicket)
+    const nextRaw = (saved.tickets || []).map(publicTicket)
+    const previousImports = (doc.imports || []).map(publicImport)
+    const nextImports = (saved.imports || []).map(publicImport)
+    const userDoc = req.user?.id ? await User.findById(req.user.id).select('username email') : null
+    const actor = {
+      userId: String(req.user?.id || userDoc?._id || ''),
+      username: userDoc?.username || '',
+      email: userDoc?.email || '',
+    }
+    const ip = requestIp(req)
+    writeActivities([
+      ...buildTicketActivities({ previousTickets: previousRaw, nextTickets: nextRaw, actor, ip }),
+      ...buildImportActivities({ previousImports, nextImports, actor, ip }),
+    ]).catch(() => {})
+
+    res.json({
+      boards: saved.boards,
+      tickets: nextRaw,
+      imports: nextImports,
+      botones: await botonesKanban(req),
+    })
+  } catch (error) {
+    console.error(error)
+    await logError('No se pudo importar el Word', error, {})
+    if (!res.headersSent) res.status(500).json({ message: 'No se pudo guardar en el servidor.' })
+  }
 }
 
 export const testDueReminder = async (req, res) => {

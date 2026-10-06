@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadStoredState, createDefaultState, clearStorage, renameLegacyBoards } from '../lib/storage.js'
-import { getKanbanRequest, saveKanbanRequest } from '../../api/kanban.js'
+import { getKanbanRequest, importKanbanWordRequest, saveKanbanRequest } from '../../api/kanban.js'
 import { DEFAULT_COLUMN_ID, DEFAULT_PRIORITY, PENDING_COLUMN_ID, needsAssignment } from '../constants/columns.js'
 import { assigneeFields, ticketAssignees } from '../lib/assignees.js'
 import { ticketTasks } from '../lib/tasks.js'
@@ -534,23 +534,31 @@ export function useKanbanStore(enabled = false) {
     }
     revision.current += 1
     const revisionAtSave = revision.current
-    dirty.current = true
+    dirty.current = false
     stateRef.current = next
     setState(next)
-    return saveKanbanRequest(packKanban(next)).then((res) => {
+    return importKanbanWordRequest({ tickets: created, import: entry }).then((res) => {
       setBotones(readBotones(res.data))
       const unpacked = unpackKanban(res.data)
-      unpacked.tickets = mergeLocalTicketFields(next.tickets, unpacked.tickets)
+      const current = stateRef.current || next
       if (revision.current !== revisionAtSave) return { entry, created }
       revision.current += 1
       dirty.current = false
       setSaveError(null)
+      const imports = new Map((unpacked.imports || []).map((item) => [item.id, item]))
+      for (const item of current.imports || []) {
+        if (item?.id && !imports.has(item.id)) imports.set(item.id, item)
+      }
       setState({
-        ...unpacked,
-        selectedBoardId: prev.selectedBoardId,
+        ...current,
+        boards: current.boards,
+        tickets: mergeLocalTicketFields(current.tickets, unionTickets(unpacked.tickets, current.tickets)),
+        imports: [...imports.values()],
+        selectedBoardId: current.selectedBoardId,
       })
       return { entry, created }
     }).catch((error) => {
+      if (revision.current === revisionAtSave) dirty.current = true
       if (!error.response) throw error
       const message = error.response.data?.message
       throw new Error(typeof message === 'string' ? message : 'No se pudo guardar en el servidor.')
