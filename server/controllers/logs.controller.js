@@ -1,6 +1,39 @@
+import os from 'os'
 import AppLog from '../models/log.model.js'
 import MailLog from '../models/mailLog.model.js'
 import SessionLog from '../models/sessionLog.model.js'
+
+export const getHost = (_req, res) => {
+  const total = os.totalmem()
+  const free = os.freemem()
+  const memory = process.memoryUsage()
+  const cpus = os.cpus()
+  res.json({
+    hostname: os.hostname(),
+    platform: os.platform(),
+    type: os.type(),
+    release: os.release(),
+    arch: os.arch(),
+    uptime: os.uptime(),
+    processUptime: process.uptime(),
+    load: os.loadavg(),
+    cpuCount: cpus.length,
+    cpuModel: cpus[0]?.model || '',
+    memory: { total, free, used: Math.max(0, total - free) },
+    process: {
+      rss: memory.rss,
+      heapTotal: memory.heapTotal,
+      heapUsed: memory.heapUsed,
+      external: memory.external,
+      node: process.version,
+      pid: process.pid,
+    },
+    render: Boolean(process.env.RENDER),
+    service: process.env.RENDER_SERVICE_NAME || '',
+    region: process.env.RENDER_REGION || '',
+    instance: process.env.RENDER_INSTANCE_ID || '',
+  })
+}
 
 export const getLogs = async (req, res) => {
   try {

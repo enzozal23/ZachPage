@@ -170,7 +170,7 @@ function App() {
             }}
           /> : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver las importaciones.</p>
         ) : showActivity ? (
-          (pathname === '/logs' || pathname === '/monitoreo/sistema' ? ve('logs') : ve('monitoreo'))
+          (pathname === '/logs' || pathname === '/monitoreo/sistema' || pathname === '/monitoreo/servidor' ? ve('logs') : ve('monitoreo'))
             ? <ActivityPage />
             : <p className="px-6 py-5 text-sm text-muted">No tenés permiso para ver el monitoreo.</p>
         ) : showSettings ? (

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getActivityRequest } from '../../api/activity.js'
-import { getLogsRequest, getMailLogsRequest, getSessionLogsRequest } from '../../api/logs.js'
+import { getHostRequest, getLogsRequest, getMailLogsRequest, getSessionLogsRequest } from '../../api/logs.js'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { boton } from '../lib/botones.js'
 import { Button } from './ui/Button.jsx'
 import { controlClass } from './ui/styles.js'
 
@@ -16,6 +18,7 @@ const VIEWS = [
   { id: 'mails', title: 'Logs de mails', text: 'Todos los correos que salen de la aplicación.' },
   { id: 'sesion', title: 'Logs de sesión', text: 'Ingresos, salidas e intentos fallidos de contraseña.' },
   { id: 'sistema', title: 'Logs de sistema', text: 'Mensajes de info y error del servidor.' },
+  { id: 'servidor', title: 'Servidor', text: 'Sistema operativo, memoria y proceso de Render.' },
 ]
 
 function formatTime(value) {
@@ -437,18 +440,126 @@ function SystemLog() {
   )
 }
 
+function formatBytes(value) {
+  const amount = Number(value) || 0
+  if (amount < 1024) return `${amount} B`
+  const units = ['KB', 'MB', 'GB', 'TB']
+  let size = amount / 1024
+  let index = 0
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024
+    index += 1
+  }
+  return `${size.toLocaleString('es-AR', { maximumFractionDigits: 1 })} ${units[index]}`
+}
+
+function formatDuration(seconds) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0))
+  const days = Math.floor(total / 86400)
+  const hours = Math.floor((total % 86400) / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  if (days) return `${days} d ${hours} h`
+  if (hours) return `${hours} h ${minutes} min`
+  return `${minutes} min`
+}
+
+const OS_LABEL = {
+  linux: 'Linux',
+  darwin: 'macOS',
+  win32: 'Windows',
+}
+
+function HostStat({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-4">
+      <p className="text-xs font-medium tracking-wide text-muted uppercase">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-ink">{value || '—'}</p>
+    </div>
+  )
+}
+
+function HostView() {
+  const [host, setHost] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await getHostRequest()
+      setHost(res.data || null)
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo leer el servidor.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const used = host?.memory?.used || 0
+  const total = host?.memory?.total || 0
+  const percent = total ? Math.min(100, Math.round((used / total) * 100)) : 0
+  const system = [OS_LABEL[host?.platform] || host?.type, host?.release, host?.arch].filter(Boolean).join(' · ')
+
+  return (
+    <LogFrame
+      title="Servidor"
+      description={host?.render ? 'Datos del proceso que está corriendo en Render.' : 'Datos del proceso que está corriendo en esta máquina.'}
+      onRefresh={load}
+    >
+      <StatusLine loading={loading} error={error} empty={false} />
+      {!loading && !error && host && (
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <HostStat label="Sistema" value={system} />
+            <HostStat label="Equipo" value={host.hostname} />
+            <HostStat label="Node" value={host.process?.node} />
+            <HostStat label="Dónde corre" value={host.render ? 'Render' : 'Local'} />
+            <HostStat label="Servicio" value={host.service} />
+            <HostStat label="Región" value={host.region} />
+            <HostStat label="Instancia" value={host.instance} />
+            <HostStat label="CPUs" value={host.cpuCount ? `${host.cpuCount} · ${host.cpuModel}` : ''} />
+            <HostStat label="Equipo encendido" value={formatDuration(host.uptime)} />
+            <HostStat label="Proceso activo" value={formatDuration(host.processUptime)} />
+            <HostStat label="Carga" value={(host.load || []).map((item) => Number(item).toLocaleString('es-AR', { maximumFractionDigits: 2 })).join(' · ')} />
+            <HostStat label="Memoria del proceso" value={formatBytes(host.process?.rss)} />
+          </div>
+          <div className="rounded-2xl border border-line bg-surface p-4">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="font-semibold text-ink">Memoria del equipo</span>
+              <span className="text-muted">{formatBytes(used)} de {formatBytes(total)} ({percent}%)</span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-sunken">
+              <div className="h-full rounded-full bg-indigo-600" style={{ width: `${percent}%` }} />
+            </div>
+            <p className="mt-2 text-xs text-muted">Libre: {formatBytes(host.memory?.free)}. Heap de Node: {formatBytes(host.process?.heapUsed)} de {formatBytes(host.process?.heapTotal)}.</p>
+          </div>
+        </div>
+      )}
+    </LogFrame>
+  )
+}
+
 const PANELS = {
   acciones: ActionsLog,
   mails: MailLog,
   sesion: SessionLog,
   sistema: SystemLog,
+  servidor: HostView,
 }
 
 function ActivityPage() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const veLogs = Boolean(boton(user?.botones, 'logs'))
   const vista = viewFromLocation(pathname)
   const Panel = PANELS[vista] || ActionsLog
+  const views = VIEWS.filter((item) => item.id !== 'servidor' || veLogs)
 
   function openView(id) {
     navigate(id === 'acciones' ? '/monitoreo' : `/monitoreo/${id}`)
@@ -462,7 +573,7 @@ function ActivityPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="tablist" aria-label="Vistas de logs">
-        {VIEWS.map((item) => {
+        {views.map((item) => {
           const selected = item.id === vista
           return (
             <button
