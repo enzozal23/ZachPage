@@ -244,7 +244,7 @@ async function permisoFaltanteDelTablero(rol, cambio) {
   if (crear) pedidos.push('tablero.crear')
   if (editar) pedidos.push('tablero.editar')
   if (eliminar) pedidos.push('tablero.eliminar')
-  if (importar) pedidos.push('tablero.importar')
+  if (importar) pedidos.push('importaciones.importar')
   if (borrarImport) pedidos.push('importaciones.eliminar')
   for (const permiso of pedidos) {
     if (!(await tiene_permiso(rol, permiso))) return permiso

@@ -5,8 +5,8 @@ export const PERMISOS = [
   { id: 'tablero.crear', grupo: 'Tablero', nombre: 'Crear tarjetas', inicializar: true },
   { id: 'tablero.editar', grupo: 'Tablero', nombre: 'Editar tarjetas', inicializar: true },
   { id: 'tablero.eliminar', grupo: 'Tablero', nombre: 'Eliminar tarjetas', inicializar: true },
-  { id: 'tablero.importar', grupo: 'Tablero', nombre: 'Importar Word', inicializar: true },
   { id: 'importaciones.ver', grupo: 'Importaciones', nombre: 'Ver importaciones', inicializar: true },
+  { id: 'importaciones.importar', grupo: 'Importaciones', nombre: 'Importar Word', inicializar: true },
   { id: 'importaciones.eliminar', grupo: 'Importaciones', nombre: 'Eliminar importaciones', inicializar: true },
   { id: 'clientes.ver', grupo: 'Clientes', nombre: 'Ver clientes', inicializar: true },
   { id: 'clientes.crear', grupo: 'Clientes', nombre: 'Crear clientes', inicializar: true },
@@ -53,9 +53,13 @@ export function permisosIniciales(rol) {
   return USUARIO_INICIAL.filter((id) => IDS.has(id))
 }
 
+function idActual(id) {
+  return id === 'tablero.importar' ? 'importaciones.importar' : id
+}
+
 function aplicarInicializacion(rol, guardados, yaInicializados, esNuevo) {
-  const conocidos = new Set(yaInicializados || [])
-  const activos = new Set(esNuevo ? permisosIniciales(rol) : (guardados || []))
+  const conocidos = new Set((yaInicializados || []).map(idActual))
+  const activos = new Set(esNuevo ? permisosIniciales(rol) : (guardados || []).map(idActual))
   if (!esNuevo && conocidos.size === 0) {
     for (const permiso of PERMISOS) conocidos.add(permiso.id)
     return {
@@ -145,7 +149,7 @@ const BOTONES = {
     { id: 'mail', permiso: 'configuraciones.editar', nombre: 'Probar mail' },
   ],
   importaciones: [
-    { id: 'importar', permiso: 'tablero.importar', nombre: 'Importar Word' },
+    { id: 'importar', permiso: 'importaciones.importar', nombre: 'Importar Word' },
     { id: 'eliminar', permiso: 'importaciones.eliminar', nombre: 'Eliminar' },
   ],
   clientes: [

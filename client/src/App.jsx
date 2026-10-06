@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, BrowserRouter } from 'react-router-dom'
+import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext.jsx'
 import NotFound from './pages/NotFound.jsx'
 
@@ -27,6 +27,7 @@ function AppShell() {
         <Route path="/novedades" />
         <Route path="/t/:ticketId" />
       </Route>
+      <Route path="/index.html" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
